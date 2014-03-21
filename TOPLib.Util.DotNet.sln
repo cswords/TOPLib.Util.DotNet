@@ -20,6 +20,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TOPLib.Util.DotNet.Extensio
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TOPLib.Util.DotNet.Dynamic", "TOPLib.Util.DotNet.Dynamic\TOPLib.Util.DotNet.Dynamic.csproj", "{F8319469-B5BE-4E7A-82E0-2295B2B9D83F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TOPLib.Util.DotNet.Persistence", "TOPLib.Util.DotNet.Persistence\TOPLib.Util.DotNet.Persistence.csproj", "{A48D2883-FE78-4A69-BBEB-C96AA154A314}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,6 +48,10 @@ Global
 		{F8319469-B5BE-4E7A-82E0-2295B2B9D83F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F8319469-B5BE-4E7A-82E0-2295B2B9D83F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F8319469-B5BE-4E7A-82E0-2295B2B9D83F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A48D2883-FE78-4A69-BBEB-C96AA154A314}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A48D2883-FE78-4A69-BBEB-C96AA154A314}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A48D2883-FE78-4A69-BBEB-C96AA154A314}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A48D2883-FE78-4A69-BBEB-C96AA154A314}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
