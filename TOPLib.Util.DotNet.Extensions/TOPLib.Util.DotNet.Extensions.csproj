@@ -4,15 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{B36578CC-680C-48D1-B297-19E06CD5AF06}</ProjectGuid>
+    <ProjectGuid>{89423067-3607-405F-A3FD-83ADF4828185}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>TOPLib.Util.DotNet.Debug</RootNamespace>
-    <AssemblyName>TOPLib.Util.DotNet.Debug</AssemblyName>
+    <RootNamespace>TOPLib.Util.DotNet.Extensions</RootNamespace>
+    <AssemblyName>TOPLib.Util.DotNet.Extensions</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,6 +23,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -29,9 +31,13 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data.Linq" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -39,10 +45,23 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="LogFile.cs" />
-    <Compile Include="Logger.cs" />
-    <Compile Include="LoggerExtensions.cs" />
+    <Compile Include="ActionExtension.cs" />
+    <Compile Include="DateTimeExtension.cs" />
+    <Compile Include="EntityExtensions.cs" />
+    <Compile Include="FileInfoExtensions.cs" />
+    <Compile Include="IPAddressExtension.cs" />
+    <Compile Include="ObjectLockExtensions.cs" />
+    <Compile Include="ObjectWebExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StringExtension.cs" />
+    <Compile Include="TasksExtension.cs" />
+    <Compile Include="XmlSerializerExtension.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TOPLib.Util.DotNet.Dynamic\TOPLib.Util.DotNet.Dynamic.csproj">
+      <Project>{f8319469-b5be-4e7a-82e0-2295b2b9d83f}</Project>
+      <Name>TOPLib.Util.DotNet.Dynamic</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
