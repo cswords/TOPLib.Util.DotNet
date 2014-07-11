@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Data;
 
 namespace TOPLib.Util.DotNet.Persistence.Db
 {
@@ -51,6 +52,27 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 return db.Execute(sql);
             }
             else throw new NotSupportedException("MySQL is not supported yet.");
+        }
+
+        public static string ToCSV(this DataTable table, string separator=",", string lineSeparator="\n")
+        {
+            string result = string.Empty;
+            //header
+            foreach (DataColumn col in table.Columns)
+            {
+                result += (result.Length == 0 ? "" : separator) + col.ColumnName;
+            }
+            //rows
+            foreach (DataRow row in table.Rows)
+            {
+                result += lineSeparator;
+                foreach (DataColumn col in table.Columns)
+                {
+                    result += (result.EndsWith(lineSeparator) ? "" : separator)
+                        + (row[col] == null ? "" : row[col].ToString().Replace(separator, " "));
+                }
+            }
+            return result;
         }
     }
 }
