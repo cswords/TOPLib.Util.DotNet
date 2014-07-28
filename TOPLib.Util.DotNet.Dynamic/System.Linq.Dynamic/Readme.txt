@@ -1,1 +1,2 @@
-I don't know where I found this, but this is not mine.
+The source should be http://weblogs.asp.net/scottgu/dynamic-linq-part-1-using-the-linq-dynamic-query-library
+and possiblly http://dynamiclinq.codeplex.com/ .
