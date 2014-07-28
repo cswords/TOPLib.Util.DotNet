@@ -39,6 +39,10 @@ namespace TOPLib.Util.DotNet.Persistence.Db
     public interface IDatabase
     {
         ITable this[string name] { get; }
+        DataTable GetSchemaTable(string sql);
+        DataTable Extract(string sql);
+        bool Execute(string sql);
+        bool DetectTable(string objectName);
     }
 
     public interface IRight : ISql { }
@@ -128,6 +132,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
     public interface ISortable
     {
         IAscSorted this[string field] { get; }
+        IAscSorted Exp(string exp);
     }
 
     public interface ISorted : ISortable
@@ -149,7 +154,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
     public interface ISelectable : ISingleSelectable
     {
-        IExtractable this[IDictionary<string, string> fields] { get; }
+        IFetchable this[IDictionary<string, string> fields] { get; }
     }
 
     public interface IFetchable : IExtractable
