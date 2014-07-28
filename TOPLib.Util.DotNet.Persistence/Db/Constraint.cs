@@ -50,7 +50,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         }
     }
 
-    public class SingleConstraint : Constraint
+    internal class SingleConstraint : Constraint
     {
         public string Expression { get; private set; }
 
@@ -65,20 +65,19 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         }
     }
 
-    public class MultiConstraint : Constraint
+    internal class MultiConstraint : Constraint
     {
         public Constraint Left { get; internal set; }
         public BinaryOperator Operator { get; internal set; }
         public Constraint Right { get; internal set; }
-
-
+        
         public override string ToString()
         {
             return "(" + Left + ") " + Operator + " (" + Right + ")";
         }
     }
 
-    public class NotConstraint : Constraint
+    internal class NotConstraint : Constraint
     {
         public Constraint OriginalConstraint { get; private set; }
         internal NotConstraint(Constraint original)
@@ -92,7 +91,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         }
     }
 
-    public enum BinaryOperator
+    internal enum BinaryOperator
     {
         AND, OR
     }
