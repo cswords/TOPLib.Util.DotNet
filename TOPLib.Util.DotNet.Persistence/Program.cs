@@ -12,14 +12,21 @@ namespace TOPLib.Util.DotNet.Persistence
         {
             var connStr = "data source=10.1.9.24;initial catalog=FileDataImport;persist security info=True;user id=WIP_Admin;password=asdf1234;MultipleActiveResultSets=True;";
             var db = BAM.BOO<MsSQLDb>(connStr);
-            var q=db["Fung_temp"].All.Select["Job No#"].Fetch(10, 15);
+            var q = db["Fung_temp"].All
+                .OrderBy["JobNo"]//.Desc
+                .Select["Job No#"].As("JobNo")["Ledger"]
+                .Fetch(10, 15)
+                ;
 
-            var r = q.Extract().ToLocalData();
+
+            
+
+            //var r = q.Extract().ToLocalData();
 
 
-            Console.WriteLine(r.Count());
+            //Console.WriteLine(r.Count());
 
-            //Console.WriteLine(q.ToSQL());
+            Console.WriteLine(q.ToSQL());
             Console.ReadKey();
         }
     }

@@ -82,9 +82,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         public override string ToSQL()
         {
-            var result = LowerJoint.ToSQL();
-            result += "\nORDER BY ";
-            return result;
+            return LowerJoint.ToSQL();
         }
 
         public IAscSorted this[string field]
@@ -92,14 +90,26 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             get
             {
                 var result = this.CreateUpper<AscSorted>();
-                result.field = field;
+                result.field = Context.LeftBracket + field + Context.RightBracket;
+                result.clause += " " + result.field;
                 return result;
             }
         }
+
+
+        public IAscSorted Exp(string exp)
+        {
+            var result = this.CreateUpper<AscSorted>();
+            result.field = exp;
+            result.clause += " " + result.field;
+            return result;
+        }
     }
 
-    internal abstract class AbstractSorted : OrderByHelper, ISorted
+    internal abstract class AbstractSorted : Joint, ISorted
     {
+        internal string clause = "ORDER BY";
+
         internal string field;
 
         public ISelectable Select
@@ -111,25 +121,49 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             }
         }
 
-        public abstract override string ToSQL();
+        public IAscSorted this[string field]
+        {
+            get
+            {
+                var result = this.CreateUpper<AscSorted>();
+                result.field = Context.LeftBracket + field + Context.RightBracket;
+                result.clause += ", " + result.field;
+                return result;
+            }
+        }
+
+
+        public IAscSorted Exp(string exp)
+        {
+            var result = this.CreateUpper<AscSorted>();
+            result.field = exp;
+            result.clause += ", " + result.field;
+            return result;
+        }
+
+        public override string ToSQL()
+        {
+            var result = LowerJoint.ToSQL();
+            if (this.LowerJoint is OrderByHelper)
+            {
+                result += "\n" + clause;
+            }
+            else
+            {
+                result = result.Replace(((AbstractSorted)this.LowerJoint).clause, this.clause);
+            }
+            return result;
+        }
     }
 
     internal class AscSorted : AbstractSorted, IAscSorted
     {
-        public override string ToSQL()
-        {
-            var result = LowerJoint.ToSQL();
-            if (LowerJoint is ISorted)
-                result += ", ";
-            result += Context.LeftBracket + field + Context.RightBracket;
-            return result;
-        }
-
         public IDescSorted Desc
         {
             get
             {
                 var result = this.CreateUpper<DescSorted>();
+                result.clause = this.clause + " DESC";
                 return result;
             }
         }
@@ -137,12 +171,6 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
     internal class DescSorted : AbstractSorted, IDescSorted
     {
-        public override string ToSQL()
-        {
-            var result = LowerJoint.ToSQL();
-            result += " DESC";
-            return result;
-        }
     }
 
     internal abstract class AbstractSelectQuery : Joint, IExtractable, ISingleSelectable
@@ -153,10 +181,14 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         public DataTable Extract()
         {
-            var result= Context.Extract(this.ToSQL());
-            foreach (var c in tohide)
+            var result = Context.Extract(this.ToSQL());
+            if (result != null)
             {
-                result.Columns.Remove(c);
+                foreach (var c in tohide)
+                {
+                    if (result.Columns.Contains(c))
+                        result.Columns.Remove(c);
+                }
             }
             return result;
         }
@@ -174,10 +206,10 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 int i = mapping.Count;
                 foreach (var kv in mapping)
                 {
-                    result += " " + kv.Key;
-                    if (kv.Key != Context.LeftBracket + kv.Value + Context.RightBracket)
+                    result += " " + kv.Value;
+                    if (Context.LeftBracket + kv.Key + Context.RightBracket != kv.Value)
                     {
-                        result += " AS " + Context.LeftBracket + kv.Value + Context.RightBracket;
+                        result += " AS " + Context.LeftBracket + kv.Key + Context.RightBracket;
                     }
                     i--;
                     if (i > 0) result += ",";
@@ -200,8 +232,8 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 var exp = field == "*" ? "*" : Context.LeftBracket + field + Context.RightBracket;
                 var result = this.CreateUpper<NoAliasSelectQuery>();
                 result.mapping = this.mapping;
-                result.mapping.Add(exp, field);
-                result.selecting = exp;
+                result.mapping.Add(field, exp);
+                result.selecting = result.mapping.Single(p => p.Key == field);
                 return result;
             }
         }
@@ -210,8 +242,8 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         {
             var result = this.CreateUpper<NoAliasSelectQuery>();
             result.mapping = this.mapping;
-            result.mapping.Add(exp, "Nameless");
-            result.selecting = exp;
+            result.mapping.Add(exp, exp);
+            result.selecting = result.mapping.Single(p => p.Key == exp);
             return result;
         }
 
@@ -237,7 +269,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         public override string ToSQL()
         {
-            return Context.Fetch(LowerJoint.ToSQL(), Skip, Take, this);
+            return Context.Fetch((IFetchable)LowerJoint, Skip, Take);
         }
     }
 
@@ -250,8 +282,8 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 var exp = field == "*" ? "*" : Context.LeftBracket + field + Context.RightBracket;
                 var result = this.CreateUpper<NoAliasSelectQuery>();
                 result.mapping = new Dictionary<string, string>();
-                result.mapping.Add(exp, field);
-                result.selecting = exp;
+                result.mapping.Add(field, exp);
+                result.selecting = result.mapping.Single(p => p.Key == field);
                 return result;
             }
         }
@@ -260,20 +292,38 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         {
             var result = this.CreateUpper<NoAliasSelectQuery>();
             result.mapping = new Dictionary<string, string>();
-            result.mapping.Add(exp, "Nameless");
-            result.selecting = exp;
+            result.mapping.Add(exp, exp);
+            result.selecting = result.mapping.Single(p => p.Key == exp);
             return result;
         }
 
-        public IExtractable this[IDictionary<string, string> fields]
+        public IFetchable this[IDictionary<string, string> fields]
         {
             get
             {
                 var result = this.CreateUpper<PagableSelectQuery>();
+
+                IEnumerable<IRowSchema> tableSchema;
+
+                Joint q = this;
+                while (!(q is Query))
+                {
+                    q = q.LowerJoint;
+                }
+                tableSchema = ((Query)q).Select["*"].GetSchema();
+
                 result.mapping = new Dictionary<string, string>();
                 foreach (var kv in fields)
                 {
-                    result.mapping.Add(Context.LeftBracket + kv.Key + Context.RightBracket, kv.Value);
+                    var s = tableSchema.Where(f => f.FieldName == kv.Value);
+                    if (s.Count() > 0)
+                    {
+                        result.mapping.Add(kv.Key, Context.LeftBracket + kv.Value + Context.RightBracket);
+                    }
+                    else
+                    {
+                        result.mapping.Add(kv.Key, "'" + kv.Value + "'");
+                    }
                 }
                 return result;
             }
@@ -291,13 +341,14 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
     internal class NoAliasSelectQuery : PagableSelectQuery, INoAliaseExtractable
     {
-        internal string selecting = null;
+        internal KeyValuePair<string, string> selecting;
 
         public IAliasedExtractable As(string alias)
         {
             var result = this.CreateUpper<AliasedSelectQuery>();
             result.mapping = this.mapping;
-            result.mapping[selecting] = alias;
+            result.mapping.Add(alias, selecting.Value);
+            result.mapping.Remove(selecting);
             result.LowerJoint = this.LowerJoint;
             return result;
         }

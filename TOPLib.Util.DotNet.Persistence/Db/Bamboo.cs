@@ -11,7 +11,6 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
     public abstract class Bamboo : IDatabase
     {
-
         public abstract string LeftBracket { get; }
         public abstract string RightBracket { get; }
 
@@ -110,7 +109,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return tblSchema;
         }
 
-        public abstract string Fetch(string sql, long skip, long take, IExtractable query);
+        public abstract string Fetch(IFetchable query, long skip, long take);
     }
 
 
@@ -137,7 +136,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             get { return "]"; }
         }
 
-        public override string Fetch(string sql, long skip, long take, IExtractable query)
+        public override string Fetch(IFetchable query, long skip, long take)
         {
             //OFFSET is implemented in SQL Server 2012
             //var result = "SELECT * FROM (\n" + sql.Indentation() + "\n) T";
@@ -145,12 +144,35 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             //result += "\nFETCH NEXT " + pageSize.ToString() + " ROWS ONLY";
 
             var ridName = "RID_" + DateTime.Now.Second.ToString();
-            var conName = "CON_" + ridName.Substring(4);
             var q = (AbstractSelectQuery)query;
-            q.tohide.Clear();
             q.tohide.Add(ridName);
-            q.tohide.Add(conName);
-            
+
+            var orderByClause = string.Empty;
+            Joint q2 = q;
+            while (q2.LowerJoint!=null&!(q2 is ISorted))
+            {
+                q2 = q2.LowerJoint;
+            }
+            if (q2 is ISorted)
+                orderByClause = ((AbstractSorted)q2).clause;
+
+
+            string conName = null;
+            if (orderByClause == string.Empty)
+            {
+                conName = "CON_" + ridName.Substring(4);
+                orderByClause = "ORDER BY " + LeftBracket + conName + RightBracket;
+                q.tohide.Add(conName);
+            }
+            //else
+            //{
+            //    while (q2.LowerJoint != null & q2 is ISorted)
+            //    {
+            //        q2 = q2.LowerJoint;
+            //    }
+            //    query = (IFetchable)q2;
+            //}
+
             var result = string.Empty;
             if (q.mapping.Count == 1 & q.mapping.First().Key == "*")
             {
@@ -162,25 +184,25 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 int i = q.mapping.Count;
                 foreach (var kv in q.mapping)
                 {
-                    result += " " + kv.Key;
-                    if (kv.Key != LeftBracket + kv.Value + RightBracket)
-                    {
-                        result += " AS " + LeftBracket + kv.Value + RightBracket;
-                    }
+                    if (!q.tohide.Contains(kv.Key))
+                        result += " " + this.LeftBracket + kv.Key + this.RightBracket;
                     i--;
                     if (i > 0) result += ",";
                 }
                 result += " FROM (";
             }
             result += "\nSELECT *, ";
-            result += "\n\tROW_NUMBER() OVER (ORDER BY " + LeftBracket + conName + RightBracket + ")";
+            result += "\n\tROW_NUMBER() OVER (" + orderByClause + ")";
             result += "\n\t\tAS " + LeftBracket + ridName + RightBracket;
             result += "\nFROM (";
-            result += "\n\tSELECT *,";
-            result += "\n\t\t1 AS " + LeftBracket + conName + RightBracket;
-            result += "\n\tFROM (";
-            result += sql.Indentation().Indentation() + "\n\t) T\n) TT) TTT";
+            result += "\n\tSELECT *";
+            if (conName != null)
+                result += ", \n\t\t1 AS " + LeftBracket + conName + RightBracket;
+            result += "\n\tFROM (\n";
+            result += query.ToSQL().Replace(orderByClause, string.Empty).Trim().Indentation().Indentation() + "\n\t) T\n) TT) TTT";
             result += "\nWHERE " + LeftBracket + ridName + RightBracket + " BETWEEN " + (skip + 1).ToString() + " AND " + (skip + take).ToString();
+            if (conName == null)
+                result += "\n" + orderByClause;
             return result;
         }
     }
@@ -218,9 +240,9 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return base.Execute(sql2);
         }
 
-        public override string Fetch(string sql, long skip, long take, IExtractable query)
+        public override string Fetch(IFetchable query, long skip, long take)
         {
-            var result = "SELECT * FROM (\n" + sql.Indentation() + "\n) T";
+            var result = "SELECT * FROM (\n" + query.ToSQL().Indentation() + "\n) T";
             result += "\nLIMIT " + skip.ToString() + ", " + take.ToString();
             return result;
         }
