@@ -31,6 +31,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="MySql.Data">
       <HintPath>..\packages\MySql.Data.6.8.3\lib\net40\MySql.Data.dll</HintPath>
@@ -45,15 +48,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Db\BAM.cs" />
+    <Compile Include="Db\Bamboo.cs" />
     <Compile Include="Db\BOO.cs" />
-    <Compile Include="Db\Comparison.cs" />
     <Compile Include="Db\Constraint.cs" />
-    <Compile Include="Db\QueryBase.cs" />
-    <Compile Include="Db\QueryExtensions.cs" />
-    <Compile Include="Db\QueryField.cs" />
+    <Compile Include="Db\Joint.cs" />
+    <Compile Include="Db\Forest.cs" />
+    <Compile Include="Db\Leaf.cs" />
     <Compile Include="Db\RowSchema.cs" />
-    <Compile Include="Db\SelectableQuery.cs" />
-    <Compile Include="Db\Table.cs" />
+    <Compile Include="Db\SelectQuery.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
