@@ -28,8 +28,20 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             {
                 if (schema == null)
                 {
-                    schema = ((IQuery)this.LowerJoint).Select["*"].GetSchema();
+                    IQuery q = null;
+                    if (this.LowerJoint is IQuery)
+                    {
+                        q = ((IQuery)this.LowerJoint);
+                    }
+                    else if (this.LowerJoint is ITable)
+                    {
+                        q = ((ITable)this.LowerJoint).All;
+                    }
+                    if (q != null)
+                        schema = q.Select["*"].GetSchema();
                 }
+                
+                if (schema == null) return;
 
                 var fschema = schema.Single(s => s.FieldName == field);
 
