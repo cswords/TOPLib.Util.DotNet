@@ -11,6 +11,14 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
     public abstract class Bamboo : IDatabase
     {
+        public System.Globalization.CultureInfo DomesticCulture { get; private set; }
+
+        public Bamboo()
+        {
+            DomesticCulture = System.Threading.Thread.CurrentThread.CurrentCulture;
+            System.Threading.Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+        }
+
         public abstract string LeftBracket { get; }
         public abstract string RightBracket { get; }
 
@@ -25,7 +33,39 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             }
         }
 
+        public bool WriteLog { get; set; }
+
         public string DbConnStr { get; internal set; }
+
+        internal class BambooParameter : IParameter
+        {
+            public IRowSchema RowSchema { get; internal set; }
+            public object Value { get; internal set; }
+        }
+
+        internal IDictionary<string, IParameter> parameters = new Dictionary<string, IParameter>();
+
+        public virtual IParameter SetParameter(string name, IRowSchema rowSchema, object value)
+        {
+            name = name == null ? string.Empty : name;
+            var key = name.StartsWith("@") ? name : "@" + name;
+            var result = new BambooParameter
+            {
+                RowSchema = rowSchema,
+                Value = value
+            };
+            if (parameters.ContainsKey(key))
+                parameters[key] = result;
+            else
+                parameters.Add(key, result);
+
+            return result;
+        }
+
+        public void ClearParameters()
+        {
+            parameters.Clear();
+        }
 
         public virtual bool Execute(string sql)
         {
@@ -39,15 +79,22 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                     conn.Open();
                     var cmd = conn.CreateCommand();
                     cmd.CommandText = sql;
+                    ApplyParameters(cmd);
+
                     cmd.ExecuteNonQuery();
                 }
 
+                parameters.Clear();
                 return true;
             }
             catch (Exception e)
             {
-                Logger.Default.Write("Failed execution.", e);
-                return false;
+                if (WriteLog)
+                {
+                    Logger.Default.Write("Failed execution.", e);
+                    return false;
+                }
+                else throw e;
             }
         }
 
@@ -55,20 +102,28 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         {
             try
             {
-                var conn = this.Connect();
-
-                var adapter = this.NewAdapter();
-                adapter.SelectCommand = conn.CreateCommand();
-                adapter.SelectCommand.CommandText = sql;
-
                 DataSet ds = new DataSet();
-                adapter.Fill(ds);
+                using (var conn = this.Connect())
+                {
+                    conn.Open();
+                    var cmd = conn.CreateCommand();
+                    cmd.CommandText = sql;
+                    ApplyParameters(cmd);
+
+                    var adapter = this.NewAdapter();
+                    adapter.SelectCommand = cmd;
+
+                    adapter.Fill(ds);
+                }
+                parameters.Clear();
                 if (ds.Tables.Count > 0)
                     return ds.Tables[0];
             }
             catch (Exception e)
             {
-                Logger.Default.Write("Failed extraction.", e);
+                if (WriteLog)
+                    Logger.Default.Write("Failed extraction.", e);
+                else throw e;
             }
             return null;
         }
@@ -109,7 +164,19 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return tblSchema;
         }
 
-        public abstract string Fetch(IFetchable query, long skip, long take);
+        public abstract string Fetch(IFetchedExtractable query);
+        
+        public void ApplyParameters(DbCommand command)
+        {
+            var c = command;
+            foreach (var kv in parameters)
+            {
+                var par = c.CreateParameter();
+                par.ParameterName = kv.Key;
+                par.Value = kv.Value.Value == null ? DBNull.Value : kv.Value.Value;
+                c.Parameters.Add(par);
+            }
+        }
     }
 
 
@@ -136,7 +203,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             get { return "]"; }
         }
 
-        public override string Fetch(IFetchable query, long skip, long take)
+        public override string Fetch(IFetchedExtractable query)
         {
             //OFFSET is implemented in SQL Server 2012
             //var result = "SELECT * FROM (\n" + sql.Indentation() + "\n) T";
@@ -145,11 +212,13 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
             var ridName = "RID_" + DateTime.Now.Second.ToString();
             var q = (AbstractSelectQuery)query;
-            q.tohide.Add(ridName);
+            //q.tohide.Clear();
+
+            //q.tohide.Add(ridName);
 
             var orderByClause = string.Empty;
             Joint q2 = q;
-            while (q2.LowerJoint!=null&!(q2 is ISorted))
+            while (q2.LowerJoint != null & !(q2 is ISorted))
             {
                 q2 = q2.LowerJoint;
             }
@@ -162,21 +231,22 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             {
                 conName = "CON_" + ridName.Substring(4);
                 orderByClause = "ORDER BY " + LeftBracket + conName + RightBracket;
-                q.tohide.Add(conName);
+                //q.tohide.Add(conName);
             }
-            //else
-            //{
-            //    while (q2.LowerJoint != null & q2 is ISorted)
-            //    {
-            //        q2 = q2.LowerJoint;
-            //    }
-            //    query = (IFetchable)q2;
-            //}
 
             var result = string.Empty;
             if (q.mapping.Count == 1 & q.mapping.First().Key == "*")
             {
-                result = "SELECT * FROM (";
+                result = "SELECT";
+                var schema = ((IExtractable)q.LowerJoint).GetSchema();
+                int i = schema.Count();
+                foreach (var rs in schema)
+                {
+                    result += " " + this.LeftBracket + rs.FieldName + this.RightBracket;
+                    i--;
+                    if (i > 0) result += ",";
+                }
+                result += " FROM (";
             }
             else
             {
@@ -184,8 +254,8 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 int i = q.mapping.Count;
                 foreach (var kv in q.mapping)
                 {
-                    if (!q.tohide.Contains(kv.Key))
-                        result += " " + this.LeftBracket + kv.Key + this.RightBracket;
+                    //if (!q.tohide.Contains(kv.Key))
+                    result += " " + this.LeftBracket + kv.Key + this.RightBracket;
                     i--;
                     if (i > 0) result += ",";
                 }
@@ -199,12 +269,13 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             if (conName != null)
                 result += ", \n\t\t1 AS " + LeftBracket + conName + RightBracket;
             result += "\n\tFROM (\n";
-            result += query.ToSQL().Replace(orderByClause, string.Empty).Trim().Indentation().Indentation() + "\n\t) T\n) TT) TTT";
-            result += "\nWHERE " + LeftBracket + ridName + RightBracket + " BETWEEN " + (skip + 1).ToString() + " AND " + (skip + take).ToString();
+            result += q.LowerJoint.ToSQL().Replace(orderByClause, string.Empty).Trim().Indentation().Indentation() + "\n\t) T\n) TT) TTT";
+            result += "\nWHERE " + LeftBracket + ridName + RightBracket + " BETWEEN " + (query.Skip + 1).ToString() + " AND " + (query.Skip + query.Take).ToString();
             if (conName == null)
                 result += "\n" + orderByClause;
             return result;
         }
+
     }
 
     public class MySQLDb : Bamboo
@@ -240,11 +311,12 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return base.Execute(sql2);
         }
 
-        public override string Fetch(IFetchable query, long skip, long take)
+        public override string Fetch(IFetchedExtractable query)
         {
             var result = "SELECT * FROM (\n" + query.ToSQL().Indentation() + "\n) T";
-            result += "\nLIMIT " + skip.ToString() + ", " + take.ToString();
+            result += "\nLIMIT " + query.Skip.ToString() + ", " + query.Take.ToString();
             return result;
         }
     }
+
 }

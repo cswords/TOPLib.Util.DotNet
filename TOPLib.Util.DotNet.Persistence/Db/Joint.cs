@@ -42,6 +42,19 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return result;
         }
 
+        public IQuery Where(IDictionary<string, object> mapping)
+        {
+            Constraint c=null;
+            foreach (var kv in mapping)
+            {
+                if (c == null)
+                    c = new SingleConstraint(Context.LeftBracket + kv.Key + Context.RightBracket + "='" + kv.Value.ToString() + "'");
+                else
+                    c = c & (new SingleConstraint(Context.LeftBracket + kv.Key + Context.RightBracket + "='" + kv.Value.ToString() + "'"));
+            }
+            return Where(c);
+        }
+
         public IQuery All
         {
             get
@@ -91,13 +104,11 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return result;
         }
 
-        public IExecutable ToDelete
+        public IExecutable ToDelete(string name)
         {
-            get
-            {
-                var result = this.CreateUpper<DeleteQuery>();
-                return result;
-            }
+            var result = this.CreateUpper<DeleteQuery>();
+            result.toDelete = name;
+            return result;
         }
 
         public override string ToSQL()

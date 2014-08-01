@@ -87,7 +87,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         public override string ToString()
         {
-            return "NOT (" + base.ToString() + ")";
+            return "NOT (" + OriginalConstraint.ToString() + ")";
         }
     }
 

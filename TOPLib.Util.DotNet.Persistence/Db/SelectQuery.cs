@@ -175,21 +175,21 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
     internal abstract class AbstractSelectQuery : Joint, IExtractable, ISingleSelectable
     {
-        internal IList<string> tohide = new List<string>();
+        //internal IList<string> tohide = new List<string>();
 
         internal IDictionary<string, string> mapping;
 
         public DataTable Extract()
         {
             var result = Context.Extract(this.ToSQL());
-            if (result != null)
-            {
-                foreach (var c in tohide)
-                {
-                    if (result.Columns.Contains(c))
-                        result.Columns.Remove(c);
-                }
-            }
+            //if (result != null)
+            //{
+            //    foreach (var c in tohide)
+            //    {
+            //        if (result.Columns.Contains(c))
+            //            result.Columns.Remove(c);
+            //    }
+            //}
             return result;
         }
 
@@ -269,7 +269,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         public override string ToSQL()
         {
-            return Context.Fetch((IFetchable)LowerJoint, Skip, Take);
+            return Context.Fetch(this);
         }
     }
 
