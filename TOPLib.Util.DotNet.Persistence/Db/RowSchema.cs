@@ -25,6 +25,18 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             get { return (Type)schemaRow["DataType"]; }
         }
 
+        public object DatabaseType
+        {
+            get
+            {
+                var rto = schemaRow["ProviderSpecificDataType"];
+                var rt = rto.GetType();
+                var propInfo = rt.GetProperty("UnderlyingSystemType");
+                var result = propInfo.GetValue(rto, null);
+                return result;
+            }
+        }
+
         public string SqlType
         {
             get { return (string)schemaRow["DataTypeName"]; }
@@ -40,6 +52,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
     {
         string FieldName { get; }
         Type DataType { get; }
+        object DatabaseType { get; }
         string SqlType { get; }
         bool IsKey { get; }
         //int? Precision { get; }

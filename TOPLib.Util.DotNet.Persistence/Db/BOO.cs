@@ -61,14 +61,14 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 if (!row.FieldName.Equals("__ROWID__"))
                     result.AddLast(row);
             }
-            if (query is AbstractSelectQuery)
-            {
-                foreach (var f in ((AbstractSelectQuery)query).tohide)
-                {
-                    var s = result.SingleOrDefault(r => r.FieldName == f);
-                    if (s != null) result.Remove(s);
-                }
-            }
+            //if (query is AbstractSelectQuery)
+            //{
+            //    foreach (var f in ((AbstractSelectQuery)query).tohide)
+            //    {
+            //        var s = result.SingleOrDefault(r => r.FieldName == f);
+            //        if (s != null) result.Remove(s);
+            //    }
+            //}
             return result;
         }
 

@@ -18,16 +18,29 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
     internal abstract class WriteOnlyLeaf : ExecutableLeaf, IWriteOnly
     {
-        internal IDictionary<string, object> values = new Dictionary<string, object>();
+        protected IEnumerable<IRowSchema> schema = null;
+
+        internal IDictionary<string, string> values = new Dictionary<string, string>();
 
         public object this[string field]
         {
             set
             {
-                if (values.ContainsKey(field))
-                    values[field] = value;
-                else
-                    values.Add(field, value);
+                if (schema == null)
+                {
+                    schema = ((IQuery)this.LowerJoint).Select["*"].GetSchema();
+                }
+
+                var fschema = schema.Single(s => s.FieldName == field);
+
+                if (value != null)
+                    if (value.GetType() != fschema.DataType) return;
+
+                var paramName = "__" + field.Replace(" ", "_");
+
+                this.values.Add(field, paramName);
+
+                this.Context.SetParameter(paramName, fschema, value);
             }
         }
     }
@@ -51,7 +64,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             i = values.Count;
             foreach (var v in values)
             {
-                result += "'" + v.Value + "'";
+                result += "@" + v.Value + "";
                 i--;
                 if (i > 0) result += ", ";
             }
@@ -66,12 +79,15 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         public override string ToSQL()
         {
-            var result = "UPDATE " + Context.LeftBracket + target + Context.RightBracket;
+            var result = "UPDATE " +
+                ((target.StartsWith(Context.LeftBracket) & target.EndsWith(Context.RightBracket))
+                ? target
+                : (Context.LeftBracket + target + Context.RightBracket));
             result += "\nSET";
             int i = values.Count;
             foreach (var v in values)
             {
-                result += " " + Context.LeftBracket + v.Key + Context.RightBracket + " = '" + v.Value.ToString() + "'";
+                result += " " + Context.LeftBracket + v.Key + Context.RightBracket + " = @" + v.Value + "";
                 i--;
                 if (i != 0) result += ",";
             }
@@ -82,10 +98,13 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
     internal class DeleteQuery : ExecutableLeaf
     {
+
+        internal string toDelete;
+
         public override string ToSQL()
         {
             var result = LowerJoint.ToSQL();
-            result = "DELETE\n" + result;
+            result = "DELETE " + Context.LeftBracket + toDelete + Context.RightBracket + "\n" + result;
             return result;
         }
     }

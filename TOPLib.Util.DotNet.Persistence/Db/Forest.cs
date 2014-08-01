@@ -6,6 +6,12 @@ using System.Text;
 
 namespace TOPLib.Util.DotNet.Persistence.Db
 {
+    public interface IParameter
+    {
+        IRowSchema RowSchema { get; }
+        object Value { get; }
+    }
+
     public interface ISql
     {
         string ToSQL();
@@ -43,6 +49,8 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         DataTable Extract(string sql);
         bool Execute(string sql);
         bool DetectTable(string objectName);
+        IParameter SetParameter(string name, IRowSchema rowSchema, object value);
+        void ClearParameters();
     }
 
     public interface IRight : ISql { }
@@ -96,6 +104,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
     public interface IQueryBase : ISql
     {
         IQuery Where(Constraint constraint);
+        IQuery Where(IDictionary<string, object> mapping);
         IQuery All { get; }
     }
 
@@ -110,7 +119,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
 
         IWriteOnly ToUpdate(string name);
-        IExecutable ToDelete { get; }
+        IExecutable ToDelete(string name);
     }
 
     public interface IWriteOnly : IExecutable
