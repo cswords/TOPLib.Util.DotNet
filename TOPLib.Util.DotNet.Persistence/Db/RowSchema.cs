@@ -25,26 +25,43 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             get { return (Type)schemaRow["DataType"]; }
         }
 
-        public object DatabaseType
+        public string SqlType
         {
             get
             {
-                var rto = schemaRow["ProviderSpecificDataType"];
-                var rt = rto.GetType();
-                var propInfo = rt.GetProperty("UnderlyingSystemType");
-                var result = propInfo.GetValue(rto, null);
+                var result = (string)schemaRow["DataTypeName"];
+                if (result == "binary"
+                   || result == "char"
+                   || result == "nchar"
+                   || result == "nvarchar"
+                   || result == "varchar"
+                   || result == "varbinary"
+                  )
+                    result += "(" + (schemaRow["ColumnSize"].ToString() == "2147483647" ? "max" : schemaRow["ColumnSize"].ToString()) + ")";
+                else if (result == "datetime2"
+                   || result == "datetimeoffset"
+                   || result == "time"
+                  )
+                    result += "(" + schemaRow["NumericScale"].ToString() + ")";
+                else if (result == "decimal"
+                   || result == "numeric"
+                  )
+                    result += "(" + schemaRow["NumericPrecision"].ToString() + "," + schemaRow["NumericScale"].ToString() + ")";
+
+                result = result.ToUpper();
                 return result;
             }
-        }
-
-        public string SqlType
-        {
-            get { return (string)schemaRow["DataTypeName"]; }
         }
 
         public bool IsKey
         {
             get { return (bool)schemaRow["IsKey"]; }
+        }
+
+
+        public bool IsHidden
+        {
+            get { return (bool)schemaRow["IsHidden"]; }
         }
     }
 
@@ -52,9 +69,9 @@ namespace TOPLib.Util.DotNet.Persistence.Db
     {
         string FieldName { get; }
         Type DataType { get; }
-        object DatabaseType { get; }
         string SqlType { get; }
         bool IsKey { get; }
+        bool IsHidden { get; }
         //int? Precision { get; }
         //int? Scale { get; }
         //int? Length { get; }

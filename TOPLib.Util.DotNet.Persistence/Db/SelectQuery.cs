@@ -247,6 +247,12 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return result;
         }
 
+        public IFillingQuery Fill(string tableName)
+        {
+            var result = this.CreateUpper<FillingQuery>();
+            result.tableName = tableName;
+            return result;
+        }
     }
 
     internal class PagableSelectQuery : AbstractSelectQuery, IFetchable, ISingleSelectable
@@ -353,5 +359,51 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return result;
         }
     }
+    
+    internal class FillingQuery: Leaf, IFillingQuery
+    {
+        internal string tableName;
 
+        public override string ToSQL()
+        {
+            var baseSql = LowerJoint.ToSQL();
+            var result = string.Empty;
+            var tableQuery=(tableName.StartsWith(Context.LeftBracket)&tableName.EndsWith(Context.RightBracket))?tableName:Context.LeftBracket+tableName+Context.RightBracket;
+            if (Context.DetectTable(tableName))
+            {
+                //insert into select
+                var sourceSchema = ((IExtractable)LowerJoint).GetSchema().Where(s => !s.IsHidden).ToArray();
+                var targetSchema = ((IExtractable)Context[tableName].All.Select["*"]).GetSchema().ToArray();
+
+                if(sourceSchema.Length!=targetSchema.Length)
+                    throw new Exception("U suck!");
+
+                result += "INSERT INTO " + tableQuery;
+                result += "\nSELECT";
+
+                for (int i = 0; i < sourceSchema.Length; i++)
+                {
+                    result += " CAST(" + Context.LeftBracket + sourceSchema[i].FieldName + Context.RightBracket + " AS " + targetSchema[i].SqlType + ") AS "
+                        + Context.LeftBracket + targetSchema[i].FieldName + Context.RightBracket;
+                    if (i + 1 < sourceSchema.Length)
+                        result += ",";
+                }
+
+                result += "\nFROM (";
+                result += "\n" + baseSql.Indentation();
+                result += "\n) TTTT";
+                
+            }
+            else
+            {
+                //select * into
+                result += "SELECT *";
+                result += "\nINTO " + tableQuery;
+                result += "\nFROM (";
+                result += "\n" + baseSql.Indentation();
+                result += "\n) TTTT";
+            }
+            return result;
+        }
+    }
 }

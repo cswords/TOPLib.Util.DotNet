@@ -138,9 +138,24 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             using (conn)
             {
                 conn.Open();
-                var restrictions = new string[] { null, null, objectName };
-                var tableInfo = conn.GetSchema("Tables", restrictions);
-                return tableInfo.Rows.Count > 0;
+                try
+                {
+                    if (objectName.Contains("."))
+                    {
+                        var countOne = this[objectName].All.Select.Exp("COUNT(1)").As("One").Extract();
+                        return countOne.Rows[0]["One"] != null;
+                    }
+                    else
+                    {
+                        var restrictions = new string[] { null, null, objectName };
+                        var tableInfo = conn.GetSchema("Tables", restrictions);
+                        return tableInfo.Rows.Count > 0;
+                    }
+                }
+                catch
+                {
+                    return false;
+                }
             }
         }
 
@@ -153,6 +168,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 {
                     cmd.CommandText = sql;
                     cmd.CommandType = CommandType.Text;
+                    ApplyParameters(cmd);
                     conn.Open();
                     using (IDataReader rdr = cmd.ExecuteReader(CommandBehavior.KeyInfo))
                     {
