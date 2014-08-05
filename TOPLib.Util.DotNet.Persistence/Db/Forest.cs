@@ -40,6 +40,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
     public interface IExtractable : ISql, IRight
     {
         DataTable Extract();
+        IFillingQuery Fill(string tableName);
     }
 
     public interface IDatabase
@@ -104,7 +105,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
     public interface IQueryBase : ISql
     {
         IQuery Where(Constraint constraint);
-        IQuery Where(IDictionary<string, object> mapping);
+        IQuery FilterBy(IDictionary<string, object> mapping);
         IQuery All { get; }
     }
 
@@ -164,6 +165,11 @@ namespace TOPLib.Util.DotNet.Persistence.Db
     public interface ISelectable : ISingleSelectable
     {
         IFetchable this[IDictionary<string, string> fields] { get; }
+    }
+
+    public interface IFillingQuery:ISql//select into, insert into select (fill null to not selected fields)
+    {
+
     }
 
     public interface IFetchable : IExtractable

@@ -10,23 +10,21 @@ namespace TOPLib.Util.DotNet.Persistence
     {
         public static void Main(string[] args)
         {
-            var connStr = "data source=10.1.9.24;initial catalog=FileDataImport;persist security info=True;user id=WIP_Admin;password=asdf1234;MultipleActiveResultSets=True;";
+            var connStr = "data source=10.1.9.24;initial catalog=FLUX_CS;persist security info=True;user id=WIP_Admin;password=asdf1234;MultipleActiveResultSets=True;";
             var db = BAM.BOO<MsSQLDb>(connStr);
-            var q = db["Fung_temp"].All
-                .OrderBy["JobNo"]//.Desc
-                .Select["Job No#"].As("JobNo")["Ledger"]
-                .Fetch(10, 15)
-                ;
 
+            var filter=new Dictionary<string, object>();
+            filter["h.OrderNo"] = "SHIT-SO1408040004";
 
-            
-
-            //var r = q.Extract().ToLocalData();
-
-
-            //Console.WriteLine(r.Count());
+            var q=db["DOC_Order_Header"].As("h").InnerJoin("DOC_Order_Details").As("d")
+                .On(BOO.L("h.OrderNo=d.OrderNo"))
+                .FilterBy(filter)
+                .Select["SKU"]["QtyOrdered_Each"].As("Qty");
 
             Console.WriteLine(q.ToSQL());
+
+            var result = q.Extract();
+            Console.WriteLine(result.Rows[0]["SKU"].ToString());
             Console.ReadKey();
         }
     }

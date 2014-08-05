@@ -42,15 +42,32 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return result;
         }
 
-        public IQuery Where(IDictionary<string, object> mapping)
+        public IQuery FilterBy(IDictionary<string, object> mapping)
         {
-            Constraint c=null;
+            Constraint c = null;
             foreach (var kv in mapping)
             {
-                if (c == null)
-                    c = new SingleConstraint(Context.LeftBracket + kv.Key + Context.RightBracket + "='" + kv.Value.ToString() + "'");
+                var schema =
+                    kv.Key.Contains(".")
+                    ? this.All.Select.Exp(kv.Key).GetSchema()
+                    : this.All.Select[kv.Key].GetSchema();
+                var rs = schema.Where(s => s.FieldName == kv.Key);
+                if (rs.Count() > 0)
+                {
+                    var paramStr = "__FilterBy_" + kv.Key.Replace(".", "_");
+                    Context.SetParameter(paramStr, rs.First(), kv.Value);
+                    if (c == null)
+                        c = new SingleConstraint(((kv.Key.Contains(".") ? kv.Key : Context.LeftBracket + kv.Key + Context.RightBracket) + "=@" + paramStr));
+                    else
+                        c = c & (new SingleConstraint(((kv.Key.Contains(".") ? kv.Key : Context.LeftBracket + kv.Key + Context.RightBracket) + "=@" + paramStr)));
+                }
                 else
-                    c = c & (new SingleConstraint(Context.LeftBracket + kv.Key + Context.RightBracket + "='" + kv.Value.ToString() + "'"));
+                {
+                    if (c == null)
+                        c = new SingleConstraint((kv.Key.Contains(".") ? kv.Key : Context.LeftBracket + kv.Key + Context.RightBracket) + "='" + kv.Value.ToString() + "'");
+                    else
+                        c = c & (new SingleConstraint((kv.Key.Contains(".") ? kv.Key : Context.LeftBracket + kv.Key + Context.RightBracket) + "='" + kv.Value.ToString() + "'"));
+                }
             }
             return Where(c);
         }
