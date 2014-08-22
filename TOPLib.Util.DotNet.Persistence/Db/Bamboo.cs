@@ -246,6 +246,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 while (j.LowerJoint != null)
                 {
                     j.Context = this;
+                    j = j.LowerJoint;
                 }
             }
         }
@@ -415,7 +416,8 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         public override string Fetch(IFetchedExtractable query)
         {
-            throw new NotSupportedException();
+            //throw new NotSupportedException();
+            return ((JointBase)query).LowerJoint.ToSQL();
         }
     }
 }
