@@ -10,9 +10,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         public static IDatabase BOO<T>(string conn)
             where T:Bamboo, new()
         {
-            var result= new T();
-            result.DbConnStr = conn;
-            return result;
+            return new Database<T>(conn);
         }
     }
 }

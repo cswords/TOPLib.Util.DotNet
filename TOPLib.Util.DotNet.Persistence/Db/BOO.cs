@@ -68,7 +68,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         {
             if (db is MsSQLDb)
             {
-                var exist = ((Bamboo)db).DetectTable(table);
+                var exist = db.DetectTable(table);
                 var sql = string.Empty;
                 //sql += "EXEC master.dbo.sp_MSset_oledb_prop N'Microsoft.ACE.OLEDB.12.0' , N'DynamicParameters' , 1;";
                 if (exist)
@@ -104,6 +104,29 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 {
                     result += (result.EndsWith(lineSeparator) ? "" : separator)
                         + (row[col] == null ? "" : row[col].ToString().Replace(separator, " "));
+                }
+            }
+            return result;
+        }
+
+        public static IDictionary<IDictionary<string, object>, Exception> Fill(this DataTable data, ITable targetTable)
+        {
+            var result = new Dictionary<IDictionary<string, object>, Exception>();
+            var schema = targetTable.Schema;
+
+            var dl = data.ToLocalData();
+            IExecutable i = null;
+            foreach (var d in dl)
+            {
+                try
+                {
+                    i = targetTable.Persist(d);
+                    i.Execute();
+                    result.Add(d, new Exception("Success with: \n" + i.ToSQL()));
+                }
+                catch (Exception e)
+                {
+                    result.Add(d, new Exception("Error with: \n" + i.ToSQL(), e));
                 }
             }
             return result;

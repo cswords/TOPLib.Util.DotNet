@@ -3,15 +3,10 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text;
+using TOPLib.Util.DotNet.Persistence.Util;
 
 namespace TOPLib.Util.DotNet.Persistence.Db
 {
-    public interface IParameter
-    {
-        IRowSchema RowSchema { get; }
-        object Value { get; }
-    }
-
     public interface ISql
     {
         string ToSQL();
@@ -32,26 +27,37 @@ namespace TOPLib.Util.DotNet.Persistence.Db
     {
     }
 
+    public interface IParameterable
+    {
+        ReadOnlyDictionary<string, object> Parameters { get; }
+        void SetParameter(string name, object value);
+    }
+
     public interface IExecutable : ISql
     {
-        void Execute();
+        void Execute(int timeout = 30);
     }
 
     public interface IExtractable : ISql, IRight
     {
-        DataTable Extract();
+        DataTable Extract(int timeout=30);
         IFillingQuery Fill(string tableName);
     }
 
     public interface IDatabase
     {
+        string DbConnStr { get; }
+        ISqlContext CreateContext();
+        bool DetectTable(string objectName);        
+    }
+
+    public interface ISqlContext : IDisposable, IParameterable
+    {
+        IDatabase Db { get; }
         ITable this[string name] { get; }
-        DataTable GetSchemaTable(string sql);
-        DataTable Extract(string sql);
-        bool Execute(string sql);
-        bool DetectTable(string objectName);
-        IParameter SetParameter(string name, IRowSchema rowSchema, object value);
-        void ClearParameters();
+        DataTable Extract(string sql, int timeout = 30);
+        DataTable GetSchemaTable(string sql, int timeout = 30);
+        bool Execute(string sql, int timeout = 30);
     }
 
     public interface IRight : ISql { }
@@ -60,9 +66,11 @@ namespace TOPLib.Util.DotNet.Persistence.Db
     {
         string Name { get; }
 
-        IDictionary<string, Type> Schema { get; }
-
         IWriteOnly ToInsert { get; }
+
+        IExecutable Persist(IDictionary<string, object> data);
+
+        IEnumerable<IRowSchema> Schema { get; }
     }
 
     public interface IAliasedTable : IAliased<IAliasedTable>, IJoinable { }

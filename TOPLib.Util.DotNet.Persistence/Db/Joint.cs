@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 
@@ -7,7 +8,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 {
     internal abstract class JointBase : ISql
     {
-        public Bamboo Context { get; internal set; }
+        internal Bamboo Context { get; set; }
 
         public Joint LowerJoint { get; internal set; }
 
@@ -44,32 +45,53 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         public IQuery FilterBy(IDictionary<string, object> mapping)
         {
-            Constraint c = null;
+            if (mapping.Count == 0)
+            {
+                throw new Exception("Is this a valid filter?");
+            }
+
+
+            ISingleSelectable schemaq = this.All.Select;
+
             foreach (var kv in mapping)
             {
-                var schema =
+                schemaq =
                     kv.Key.Contains(".")
-                    ? this.All.Select.Exp(kv.Key).GetSchema()
-                    : this.All.Select[kv.Key].GetSchema();
-                var rs = schema.Where(s => s.FieldName == kv.Key);
-                if (rs.Count() > 0)
-                {
-                    var paramStr = "__FilterBy_" + kv.Key.Replace(".", "_");
-                    Context.SetParameter(paramStr, rs.First(), kv.Value);
-                    if (c == null)
-                        c = new SingleConstraint(((kv.Key.Contains(".") ? kv.Key : Context.LeftBracket + kv.Key + Context.RightBracket) + "=@" + paramStr));
-                    else
-                        c = c & (new SingleConstraint(((kv.Key.Contains(".") ? kv.Key : Context.LeftBracket + kv.Key + Context.RightBracket) + "=@" + paramStr)));
-                }
-                else
-                {
-                    if (c == null)
-                        c = new SingleConstraint((kv.Key.Contains(".") ? kv.Key : Context.LeftBracket + kv.Key + Context.RightBracket) + "='" + kv.Value.ToString() + "'");
-                    else
-                        c = c & (new SingleConstraint((kv.Key.Contains(".") ? kv.Key : Context.LeftBracket + kv.Key + Context.RightBracket) + "='" + kv.Value.ToString() + "'"));
-                }
+                    ? schemaq.Exp(kv.Key)
+                    : schemaq[kv.Key];
             }
-            return Where(c);
+
+            if (schemaq is IExtractable)
+            {
+                var schema = ((IExtractable)schemaq).GetSchema();
+                Constraint c = null;
+
+                foreach (var kv in mapping)
+                {
+                    var rs = schema.Where(s => s.FieldName == kv.Key);
+                    if (rs.Count() > 0)
+                    {
+                        var paramStr = "__FilterBy_" + kv.Key.Replace(".", "_");
+                        Context.SetParameter(paramStr, kv.Value);
+                        if (c == null)
+                            c = new SingleConstraint(((kv.Key.Contains(".") ? kv.Key : Context.LeftBracket + kv.Key + Context.RightBracket) + "=@" + paramStr));
+                        else
+                            c = c & (new SingleConstraint(((kv.Key.Contains(".") ? kv.Key : Context.LeftBracket + kv.Key + Context.RightBracket) + "=@" + paramStr)));
+                    }
+                    else
+                    {
+                        if (c == null)
+                            c = new SingleConstraint((kv.Key.Contains(".") ? kv.Key : Context.LeftBracket + kv.Key + Context.RightBracket) + "='" + kv.Value.ToString() + "'");
+                        else
+                            c = c & (new SingleConstraint((kv.Key.Contains(".") ? kv.Key : Context.LeftBracket + kv.Key + Context.RightBracket) + "='" + kv.Value.ToString() + "'"));
+                    }
+                }
+                return Where(c);
+            }
+            else
+            {
+                throw new Exception("Is this a valid filter?");
+            }
         }
 
         public IQuery All
@@ -160,11 +182,6 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             private set;
         }
 
-        public IDictionary<string, Type> Schema
-        {
-            get { throw new NotImplementedException(); }
-        }
-
         public IWriteOnly ToInsert
         {
             get
@@ -179,6 +196,72 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             var result = this.CreateUpper<AliasedTable>();
             result.Alias = alias;
             return result;
+        }
+
+        private IEnumerable<IRowSchema> schema;
+
+        public IEnumerable<IRowSchema> Schema
+        {
+            get
+            {
+                if (schema == null)
+                {
+                    schema = this.All.Select["*"].GetSchema();
+                }
+                return schema;
+            }
+        }
+
+
+        public IExecutable Persist(IDictionary<string, object> data)
+        {
+            var filter = new Dictionary<string, object>();
+
+            foreach (var keyName in this.Schema.Where(s => s.IsKey).Select(s => s.FieldName))
+            {
+                var keyValue = data[keyName];
+                if (keyValue == null)
+                {
+                    throw new Exception(Context.LeftBracket + keyName + Context.RightBracket + " is a key field, which does not allow null value.");
+                }
+                else
+                {
+                    filter.Add(keyName, keyValue);
+                }
+            }
+
+
+            DataTable testResult;
+            var testquery = this.FilterBy(filter).Select.Exp("1").As("One");
+            testResult = testquery.Extract();
+
+            if (testResult.Rows.Count > 0)
+            {
+                //update
+                var u = this.As("t").FilterBy(filter).ToUpdate("t");
+                foreach (var d in data)
+                {
+                    var sl = schema.Where(s => s.FieldName == d.Key);
+                    if (sl.Count() > 0)
+                    {
+                        if (!sl.First().IsKey)
+                        {
+                            u[d.Key] = d.Value;
+                        }
+                    }
+                }
+                return u;
+            }
+            else
+            {
+                //insert
+                var i = this.ToInsert;
+                foreach (var d in data)
+                {
+                    i[d.Key] = d.Value;
+                }
+                return i;
+            }
         }
     }
 

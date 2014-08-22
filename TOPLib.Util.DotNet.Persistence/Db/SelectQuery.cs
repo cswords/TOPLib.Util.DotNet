@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text;
+using TOPLib.Util.DotNet.Persistence.Util;
 
 namespace TOPLib.Util.DotNet.Persistence.Db
 {
@@ -179,17 +180,9 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         internal IDictionary<string, string> mapping;
 
-        public DataTable Extract()
+        public DataTable Extract(int timeout=30)
         {
-            var result = Context.Extract(this.ToSQL());
-            //if (result != null)
-            //{
-            //    foreach (var c in tohide)
-            //    {
-            //        if (result.Columns.Contains(c))
-            //            result.Columns.Remove(c);
-            //    }
-            //}
+            var result = Context.Extract(this.ToSQL(), timeout);
             return result;
         }
 
@@ -369,7 +362,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             var baseSql = LowerJoint.ToSQL();
             var result = string.Empty;
             var tableQuery=(tableName.StartsWith(Context.LeftBracket)&tableName.EndsWith(Context.RightBracket))?tableName:Context.LeftBracket+tableName+Context.RightBracket;
-            if (Context.DetectTable(tableName))
+            if (Context.Db.DetectTable(tableName))
             {
                 //insert into select
                 var sourceSchema = ((IExtractable)LowerJoint).GetSchema().Where(s => !s.IsHidden).ToArray();

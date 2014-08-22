@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Data;
+using TOPLib.Util.DotNet.Persistence.Util;
 
 namespace TOPLib.Util.DotNet.Persistence.Db
 {
@@ -10,9 +11,9 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
     internal abstract class ExecutableLeaf : Leaf, IExecutable
     {
-        public void Execute()
+        public void Execute(int timeout = 30)
         {
-            this.Context.Execute(this.ToSQL());
+            this.Context.Execute(this.ToSQL(), timeout);
         }
     }
 
@@ -52,7 +53,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
                 this.values.Add(field, paramName);
 
-                this.Context.SetParameter(paramName, fschema, value);
+                Context.SetParameter(paramName, value);
             }
         }
     }

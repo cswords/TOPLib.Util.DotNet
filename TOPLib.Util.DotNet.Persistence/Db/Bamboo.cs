@@ -5,86 +5,106 @@ using System.Data.Common;
 using System.Linq;
 using System.Text;
 using TOPLib.Util.DotNet.Debug;
+using TOPLib.Util.DotNet.Persistence.Util;
 
 namespace TOPLib.Util.DotNet.Persistence.Db
 {
 
-    public abstract class Bamboo : IDatabase
+    internal class Database<T> : IDatabase
+        where T:Bamboo, new()
     {
         public System.Globalization.CultureInfo DomesticCulture { get; private set; }
 
-        public Bamboo()
+        internal Database(string conn)
         {
             DomesticCulture = System.Threading.Thread.CurrentThread.CurrentCulture;
             System.Threading.Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+
+            this.DbConnStr = conn;
         }
 
-        public abstract string LeftBracket { get; }
-        public abstract string RightBracket { get; }
+        public string DbConnStr { get; private set; }
 
-        public ITable this[string name]
+        public bool DetectTable(string objectName)
         {
-            get
+            using (Bamboo db = ((Bamboo)this.CreateContext()))
             {
-                var result = new Table(name);
-                result.Context = this;
-                result.LowerJoint = null;
-                return result;
+                DbConnection conn = db.Connect();
+
+                using (conn)
+                {
+                    conn.Open();
+                    try
+                    {
+                        if (objectName.Contains("."))
+                        {
+                            DataTable countOne;
+                            countOne = db[objectName].All.Select.Exp("COUNT(1)").As("One").Extract();
+                            return countOne.Rows[0]["One"] != null;
+                        }
+                        else
+                        {
+                            var restrictions = new string[] { null, null, objectName };
+                            var tableInfo = conn.GetSchema("Tables", restrictions);
+                            return tableInfo.Rows.Count > 0;
+                        }
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                }
             }
         }
 
-        public bool WriteLog { get; set; }
-
-        public string DbConnStr { get; internal set; }
-
-        internal class BambooParameter : IParameter
+        public ISqlContext CreateContext()
         {
-            public IRowSchema RowSchema { get; internal set; }
-            public object Value { get; internal set; }
-        }
-
-        internal IDictionary<string, IParameter> parameters = new Dictionary<string, IParameter>();
-
-        public virtual IParameter SetParameter(string name, IRowSchema rowSchema, object value)
-        {
-            name = name == null ? string.Empty : name;
-            var key = name.StartsWith("@") ? name : "@" + name;
-            var result = new BambooParameter
-            {
-                RowSchema = rowSchema,
-                Value = value
-            };
-            if (parameters.ContainsKey(key))
-                parameters[key] = result;
-            else
-                parameters.Add(key, result);
-
+            var result = new T { Db = this };
+            result.Init();
             return result;
         }
+    }
 
-        public void ClearParameters()
+    public abstract class Bamboo : ISqlContext
+    {
+        internal DbConnection Connection { get; private set; }
+        internal DbCommand Command { get; private set; }
+        internal DbDataAdapter Adapter { get; private set; }
+
+        internal void Init()
         {
-            parameters.Clear();
+            this.Connection = this.Connect();
+            this.Connection.Open();
+            this.Command = this.Connection.CreateCommand();
+            this.Adapter = this.NewAdapter();
+            this.ContextUid = Guid.NewGuid();
         }
 
-        public virtual bool Execute(string sql)
+        internal Guid ContextUid { get; private set; }
+
+        public abstract string LeftBracket { get; }
+        public abstract string RightBracket { get; }
+        
+        public bool WriteLog { get; set; }
+
+        public IDatabase Db { get; internal set; }
+
+        internal abstract DbConnection Connect();
+        internal abstract DbDataAdapter NewAdapter();
+
+        public virtual bool Execute(string sql, int timeout = 30)
         {
             try
             {
+                sql = "--Execute " + ContextUid.ToString() + "\r\n" + sql;
 #if DEBUG
                 Console.WriteLine(sql);
 #endif
-                using (var conn = this.Connect())
-                {
-                    conn.Open();
-                    var cmd = conn.CreateCommand();
-                    cmd.CommandText = sql;
-                    ApplyParameters(cmd);
+                this.Command.CommandTimeout = timeout;
+                this.Command.CommandText = sql;
+                ApplyParameters(this.Command, this.Parameters);
 
-                    cmd.ExecuteNonQuery();
-                }
-
-                parameters.Clear();
+                this.Command.ExecuteNonQuery();
                 return true;
             }
             catch (Exception e)
@@ -98,24 +118,21 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             }
         }
 
-        public virtual DataTable Extract(string sql)
+        public virtual DataTable Extract(string sql, int timeout = 30)
         {
             try
             {
                 DataSet ds = new DataSet();
-                using (var conn = this.Connect())
-                {
-                    conn.Open();
-                    var cmd = conn.CreateCommand();
-                    cmd.CommandText = sql;
-                    ApplyParameters(cmd);
+                sql = "--Exetract " + ContextUid.ToString() + "\r\n" + sql;
+#if DEBUG
+                Console.WriteLine(sql);
+#endif
+                this.Command.CommandTimeout = timeout;
+                this.Command.CommandText = sql;
+                ApplyParameters(this.Command, this.Parameters);
 
-                    var adapter = this.NewAdapter();
-                    adapter.SelectCommand = cmd;
-
-                    adapter.Fill(ds);
-                }
-                parameters.Clear();
+                this.Adapter.SelectCommand = this.Command;
+                this.Adapter.Fill(ds);
                 if (ds.Tables.Count > 0)
                     return ds.Tables[0];
             }
@@ -128,83 +145,115 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return null;
         }
 
-        internal abstract DbConnection Connect();
-        internal abstract IDbDataAdapter NewAdapter();
-
-        public bool DetectTable(string objectName)
-        {
-            DbConnection conn = this.Connect();
-
-            using (conn)
-            {
-                conn.Open();
-                try
-                {
-                    if (objectName.Contains("."))
-                    {
-                        var countOne = this[objectName].All.Select.Exp("COUNT(1)").As("One").Extract();
-                        return countOne.Rows[0]["One"] != null;
-                    }
-                    else
-                    {
-                        var restrictions = new string[] { null, null, objectName };
-                        var tableInfo = conn.GetSchema("Tables", restrictions);
-                        return tableInfo.Rows.Count > 0;
-                    }
-                }
-                catch
-                {
-                    return false;
-                }
-            }
-        }
-
-        public DataTable GetSchemaTable(string sql)
+        public DataTable GetSchemaTable(string sql, int timeout = 30)
         {
             DataTable tblSchema;
-            using (var conn = this.Connect())
+
+            sql = "--Schema " + ContextUid.ToString() + "\r\n" + sql;
+#if DEBUG
+            Console.WriteLine(sql);
+#endif
+            this.Command.CommandTimeout = timeout;
+            this.Command.CommandText = sql;
+            ApplyParameters(this.Command, this.Parameters);
+
+            //this.Command.CommandType = CommandType.Text;
+            using (IDataReader rdr = this.Command.ExecuteReader(CommandBehavior.KeyInfo))
             {
-                using (DbCommand cmd = conn.CreateCommand())
-                {
-                    cmd.CommandText = sql;
-                    cmd.CommandType = CommandType.Text;
-                    ApplyParameters(cmd);
-                    conn.Open();
-                    using (IDataReader rdr = cmd.ExecuteReader(CommandBehavior.KeyInfo))
-                    {
-                        tblSchema = rdr.GetSchemaTable();
-                    }
-                    conn.Close();
-                }
+                tblSchema = rdr.GetSchemaTable();
             }
             return tblSchema;
         }
 
         public abstract string Fetch(IFetchedExtractable query);
-        
-        public void ApplyParameters(DbCommand command)
+
+        protected void ApplyParameters(DbCommand command, ReadOnlyDictionary<string, object> parameters)
         {
             var c = command;
-            foreach (var kv in parameters)
+            if (parameters != null)
             {
-                var par = c.CreateParameter();
-                par.ParameterName = kv.Key;
-                par.Value = kv.Value.Value == null ? DBNull.Value : kv.Value.Value;
-                c.Parameters.Add(par);
+                foreach (var kv in parameters)
+                {
+                    var existing = c.Parameters.IndexOf(kv.Key);
+                    if (existing>=0)
+                    {
+                        var par = c.Parameters[existing];
+                        par.Value = kv.Value == null ? DBNull.Value : kv.Value;
+                    }
+                    else
+                    {
+                        var par = c.CreateParameter();
+                        par.ParameterName = kv.Key;
+                        par.Value = kv.Value == null ? DBNull.Value : kv.Value;
+                        c.Parameters.Add(par);
+                    }
+                }
             }
         }
+
+        public ITable this[string name]
+        {
+            get
+            {
+                var result = new Table(name);
+                result.Context = this;
+                result.LowerJoint = null;
+                return result;
+            }
+        }
+
+        public void Dispose()
+        {
+            this.Adapter.Dispose();
+            this.Adapter = null;
+            this.Command.Dispose();
+            this.Command = null;
+            this.Connection.Close();
+            this.Connection.Dispose();
+            this.Connection = null;
+            this.parameters = null;
+            this.Db = null;
+        }
+
+        private IDictionary<string, object> parameters=null;
+
+        public ReadOnlyDictionary<string, object> Parameters
+        {
+            get
+            {
+                if (parameters == null)
+                    parameters = new Dictionary<string, object>();
+                return new ReadOnlyDictionary<string, object>(parameters);
+            }
+        }
+
+        public void SetParameter(string name, object value)
+        {
+            if (parameters == null)
+            {
+                parameters = new Dictionary<string, object>();
+                parameters.Add(name, value);
+            }
+            else
+            {
+                if (parameters.ContainsKey(name))
+                    parameters[name] = value;
+                else
+                    parameters.Add(name, value);
+            }
+        }
+
     }
-
-
+    
     public class MsSQLDb : Bamboo
     {
 
         internal override DbConnection Connect()
         {
-            return new System.Data.SqlClient.SqlConnection(DbConnStr);
+            return new System.Data.SqlClient.SqlConnection(Db.DbConnStr);
         }
 
-        internal override IDbDataAdapter NewAdapter()
+        internal override DbDataAdapter NewAdapter()
         {
             return new System.Data.SqlClient.SqlDataAdapter();
         }
@@ -299,10 +348,10 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         internal override DbConnection Connect()
         {
-            return new MySql.Data.MySqlClient.MySqlConnection(DbConnStr);
+            return new MySql.Data.MySqlClient.MySqlConnection(Db.DbConnStr);
         }
 
-        internal override IDbDataAdapter NewAdapter()
+        internal override DbDataAdapter NewAdapter()
         {
             return new MySql.Data.MySqlClient.MySqlDataAdapter();
         }
@@ -317,14 +366,14 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             get { return "`"; }
         }
 
-        public override bool Execute(string sql)
+        public override bool Execute(string sql, int timeout = 30)
         {
             var sql2 = "SET SQL_SAFE_UPDATES=0;" + sql;
             if (!sql.EndsWith(";"))
                 sql2 += ";SET SQL_SAFE_UPDATES=1;";
             else
                 sql2 += "SET SQL_SAFE_UPDATES=1;";
-            return base.Execute(sql2);
+            return base.Execute(sql2, timeout);
         }
 
         public override string Fetch(IFetchedExtractable query)
@@ -335,4 +384,34 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         }
     }
 
+    public class PgSQLDb : Bamboo
+    {
+
+        internal override DbConnection Connect()
+        {
+            return new Npgsql.NpgsqlConnection(Db.DbConnStr);
+        }
+
+        internal override DbDataAdapter NewAdapter()
+        {
+            return new Npgsql.NpgsqlDataAdapter();
+        }
+
+        public override string LeftBracket
+        {
+            get { return "\""; }
+        }
+
+        public override string RightBracket
+        {
+            get { return "\""; }
+        }
+
+        public override string Fetch(IFetchedExtractable query)
+        {
+            var result = "SELECT * FROM (\n" + query.ToSQL().Indentation() + "\n) T";
+            result += "\nLIMIT " + query.Skip.ToString() + ", " + query.Take.ToString();
+            return result;
+        }
+    }
 }
