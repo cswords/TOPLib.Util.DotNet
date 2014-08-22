@@ -403,9 +403,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         public override string Fetch(IFetchedExtractable query)
         {
-            var result = "SELECT * FROM (\n" + query.ToSQL().Indentation() + "\n) T";
-            result += "\nLIMIT " + query.Skip.ToString() + ", " + query.Take.ToString();
-            return result;
+            throw new NotSupportedException();
         }
     }
 }
