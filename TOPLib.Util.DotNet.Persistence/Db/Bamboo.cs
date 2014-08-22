@@ -237,6 +237,18 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             }
         }
 
+        public void TakeOver<T>(T query)
+            where T : ISql
+        {
+            if (query is JointBase)
+            {
+                var j = (JointBase)(object)query;
+                while (j.LowerJoint != null)
+                {
+                    j.Context = this;
+                }
+            }
+        }
     }
     
     public class MsSQLDb : Bamboo

@@ -58,6 +58,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         DataTable Extract(string sql, int timeout = 30);
         DataTable GetSchemaTable(string sql, int timeout = 30);
         bool Execute(string sql, int timeout = 30);
+        void TakeOver<T>(T query) where T : ISql;
     }
 
     public interface IRight : ISql { }

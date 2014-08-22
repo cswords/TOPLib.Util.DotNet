@@ -12,5 +12,18 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         {
             return new Database<T>(conn);
         }
+
+        public static IDatabase BOO(string type, string conn)
+        {
+            switch (type)
+            {
+                case "MySQL":
+                    return new Database<MySQLDb>(conn);
+                case "PgSQL":
+                    return new Database<PgSQLDb>(conn);
+                default:
+                    return new Database<MsSQLDb>(conn);
+            }
+        }
     }
 }
