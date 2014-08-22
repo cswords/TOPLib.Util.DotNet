@@ -29,30 +29,24 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         {
             using (Bamboo db = ((Bamboo)this.CreateContext()))
             {
-                DbConnection conn = db.Connect();
-
-                using (conn)
+                try
                 {
-                    conn.Open();
-                    try
+                    if (objectName.Contains("."))
                     {
-                        if (objectName.Contains("."))
-                        {
-                            DataTable countOne;
-                            countOne = db[objectName].All.Select.Exp("COUNT(1)").As("One").Extract();
-                            return countOne.Rows[0]["One"] != null;
-                        }
-                        else
-                        {
-                            var restrictions = new string[] { null, null, objectName };
-                            var tableInfo = conn.GetSchema("Tables", restrictions);
-                            return tableInfo.Rows.Count > 0;
-                        }
+                        DataTable countOne;
+                        countOne = db[objectName].All.Select.Exp("COUNT(1)").As("One").Extract();
+                        return countOne.Rows[0]["One"] != null;
                     }
-                    catch
+                    else
                     {
-                        return false;
+                        var restrictions = new string[] { null, null, objectName };
+                        var tableInfo = db.Connection.GetSchema("Tables", restrictions);
+                        return tableInfo.Rows.Count > 0;
                     }
+                }
+                catch
+                {
+                    return false;
                 }
             }
         }
