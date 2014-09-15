@@ -63,6 +63,7 @@
     <Compile Include="Db\RowSchema.cs" />
     <Compile Include="Db\SelectQuery.cs" />
     <Compile Include="Util\Context.cs" />
+    <Compile Include="Util\ObjectExtensions.cs" />
     <Compile Include="Util\ReadOnlyDictionary.cs" />
     <Compile Include="Test\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

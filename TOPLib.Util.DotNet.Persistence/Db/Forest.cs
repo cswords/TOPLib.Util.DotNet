@@ -72,6 +72,8 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         IExecutable Persist(IDictionary<string, object> data);
 
         IEnumerable<IRowSchema> Schema { get; }
+
+        System.Collections.IEnumerable ValuesOf(string field);
     }
 
     public interface IAliasedTable : IAliased<IAliasedTable>, IJoinable { }
@@ -140,6 +142,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
     public interface IGroupable
     {
         IGrouped this[string field] { get; }
+        IGrouped Exp(string field);
     }
 
     public interface IGrouped : IGroupable

@@ -20,9 +20,17 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             {
                 var result = this.CreateUpper<Grouped>();
                 result.groupFields = new List<string>();
-                result.groupFields.Insert(0, field);
+                result.groupFields.Insert(0, Context.LeftBracket + field + Context.RightBracket);
                 return result;
             }
+        }
+
+        public IGrouped Exp(string field)
+        {
+            var result = this.CreateUpper<Grouped>();
+            result.groupFields = new List<string>();
+            result.groupFields.Insert(0, field);
+            return result;
         }
     }
 
@@ -32,14 +40,20 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         public override string ToSQL()
         {
-            var result = LowerJoint.ToSQL();
+            var groupBase = LowerJoint;
+            while (groupBase is IGrouped)
+            {
+                groupBase = groupBase.LowerJoint;
+            }
+
+            var result = groupBase.ToSQL();
             if (groupFields.Count > 0)
             {
                 result += "\nGROUP BY";
                 int i = groupFields.Count;
                 foreach (var field in groupFields)
                 {
-                    result += " " + Context.LeftBracket + field + Context.RightBracket;
+                    result += " " + field;
                     i--;
                     if (i != 0) result += ",";
                 }
@@ -53,9 +67,17 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             {
                 var result = this.CreateUpper<Grouped>();
                 result.groupFields = this.groupFields;
-                result.groupFields.Insert(groupFields.Count, field);
+                result.groupFields.Insert(groupFields.Count, Context.LeftBracket + field + Context.RightBracket);
                 return result;
             }
+        }
+
+        public IGrouped Exp(string field)
+        {
+            var result = this.CreateUpper<Grouped>();
+            result.groupFields = this.groupFields;
+            result.groupFields.Insert(groupFields.Count, field);
+            return result;
         }
 
         public ISortable OrderBy
@@ -128,7 +150,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             {
                 var result = this.CreateUpper<AscSorted>();
                 result.field = Context.LeftBracket + field + Context.RightBracket;
-                result.clause += ", " + result.field;
+                result.clause = this.clause + ", " + result.field;
                 return result;
             }
         }
@@ -318,6 +340,10 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                     if (s.Count() > 0)
                     {
                         result.mapping.Add(kv.Key, Context.LeftBracket + kv.Value + Context.RightBracket);
+                    }
+                    else if(string.IsNullOrWhiteSpace(kv.Value))
+                    {
+                        result.mapping.Add(kv.Key, "NULL");
                     }
                     else
                     {

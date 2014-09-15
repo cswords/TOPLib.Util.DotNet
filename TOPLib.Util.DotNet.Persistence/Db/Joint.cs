@@ -217,7 +217,9 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         {
             var filter = new Dictionary<string, object>();
 
-            foreach (var keyName in this.Schema.Where(s => s.IsKey).Select(s => s.FieldName))
+            var keyList = this.Schema.Where(s => s.IsKey).Count() > 0 ? this.Schema.Where(s => s.IsKey).Select(s => s.FieldName) : this.Schema.Select(s => s.FieldName);
+
+            foreach (var keyName in keyList)
             {
                 var keyValue = data[keyName];
                 if (keyValue == null)
@@ -261,6 +263,79 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                     i[d.Key] = d.Value;
                 }
                 return i;
+            }
+        }
+
+
+        public System.Collections.IEnumerable ValuesOf(string field)
+        {
+            var sl = this.Schema.Where(s => s.FieldName == field);
+            IRowSchema rowSchema=null;
+            if (sl.Count() == 0)
+            {
+                return null;
+            }
+            else
+            {
+                rowSchema = sl.First();
+                if (rowSchema.DataType == typeof(bool))
+                {
+                    if (rowSchema.Nullable)
+                    {
+                        var result = new LinkedList<bool?>();
+                        result.AddFirst(new LinkedListNode<bool?>(null));
+                        result.AddLast(true);
+                        result.AddLast(false);
+                        return result;
+                    }
+                    else
+                    {
+                        var result = new LinkedList<bool>();
+                        result.AddLast(true);
+                        result.AddLast(false);
+                        return result;
+                    }
+                }
+            }
+
+            var sql = "SELECT p.TABLE_NAME AS ParentTable, p.COLUMN_NAME AS PrimaryField";
+            sql += " FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE p";
+            sql += " INNER JOIN INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS c ON p.CONSTRAINT_NAME=c.UNIQUE_CONSTRAINT_NAME";
+            sql += " INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE f ON c.CONSTRAINT_NAME=f.CONSTRAINT_NAME";
+            sql += " WHERE f.TABLE_NAME='" + this.Name + "' AND f.COLUMN_NAME='" + field + "'";
+
+            try
+            {
+                var constraints = Context.Extract(sql);
+
+                if (constraints != null)
+                {
+                    if (constraints.Rows.Count == 1)
+                    {
+                        var parentTable = (string)constraints.Rows[0]["ParentTable"];
+                        var primaryField = (string)constraints.Rows[0]["PrimaryField"];
+
+                        var q = Context[parentTable].All.GroupBy[primaryField].Select[primaryField];
+
+                        var d = q.Extract();
+                        if (d != null)
+                        {
+                            var rl= d.Rows.Cast<DataRow>().Select(r => r[primaryField]);
+                            if (rowSchema.Nullable)
+                            {
+                                var result = new LinkedList<object>(rl);
+                                result.AddFirst(new LinkedListNode<object>(null));
+                                return result;
+                            }
+                            else return rl;
+                        }
+                    }
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
             }
         }
     }

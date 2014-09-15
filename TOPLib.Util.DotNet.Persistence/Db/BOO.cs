@@ -126,7 +126,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 }
                 catch (Exception e)
                 {
-                    result.Add(d, new Exception("Error with: \n" + i.ToSQL(), e));
+                    result.Add(d, new Exception(i != null ? ("Error with: \n" + i.ToSQL()) : "Please check internal error.", e));
                 }
             }
             return result;

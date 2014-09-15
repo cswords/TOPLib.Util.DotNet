@@ -63,6 +63,11 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         {
             get { return (bool)schemaRow["IsHidden"]; }
         }
+
+        public bool Nullable
+        {
+            get { return (bool)schemaRow["AllowDBNull"]; }
+        }
     }
 
     public interface IRowSchema
@@ -72,6 +77,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         string SqlType { get; }
         bool IsKey { get; }
         bool IsHidden { get; }
+        bool Nullable { get; }
         //int? Precision { get; }
         //int? Scale { get; }
         //int? Length { get; }

@@ -47,7 +47,13 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 var fschema = schema.Single(s => s.FieldName == field);
 
                 if (value != null)
-                    if (value.GetType() != fschema.DataType) return;
+                {
+                    if (value.GetType() != fschema.DataType)
+                    {
+                        if (!value.GetType().IsConvertableTo(fschema.DataType))
+                            return;
+                    }
+                }
 
                 var paramName = "__" + field.Replace(" ", "_");
 

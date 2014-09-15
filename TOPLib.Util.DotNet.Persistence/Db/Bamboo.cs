@@ -96,7 +96,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 #endif
                 this.Command.CommandTimeout = timeout;
                 this.Command.CommandText = sql;
-                ApplyParameters(this.Command, this.Parameters);
+                ApplyParameters(this.Parameters);
 
                 this.Command.ExecuteNonQuery();
                 return true;
@@ -123,7 +123,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 #endif
                 this.Command.CommandTimeout = timeout;
                 this.Command.CommandText = sql;
-                ApplyParameters(this.Command, this.Parameters);
+                ApplyParameters(this.Parameters);
 
                 this.Adapter.SelectCommand = this.Command;
                 this.Adapter.Fill(ds);
@@ -149,7 +149,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 #endif
             this.Command.CommandTimeout = timeout;
             this.Command.CommandText = sql;
-            ApplyParameters(this.Command, this.Parameters);
+            ApplyParameters(this.Parameters);
 
             //this.Command.CommandType = CommandType.Text;
             using (IDataReader rdr = this.Command.ExecuteReader(CommandBehavior.KeyInfo))
@@ -161,9 +161,20 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         public abstract string Fetch(IFetchedExtractable query);
 
-        protected void ApplyParameters(DbCommand command, ReadOnlyDictionary<string, object> parameters)
+        public virtual DbParameter CreateParameter(KeyValuePair<string, object> kv)
         {
-            var c = command;
+            var c = this.Command;
+            var par = c.CreateParameter();
+            par.ParameterName = kv.Key;
+            if (kv.Value == null)
+                par.Value = DBNull.Value;
+            par.Value = kv.Value == null ? DBNull.Value : kv.Value;
+            return par;
+        }
+
+        protected void ApplyParameters(ReadOnlyDictionary<string, object> parameters)
+        {
+            var c = this.Command;
             if (parameters != null)
             {
                 foreach (var kv in parameters)
@@ -176,9 +187,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                     }
                     else
                     {
-                        var par = c.CreateParameter();
-                        par.ParameterName = kv.Key;
-                        par.Value = kv.Value == null ? DBNull.Value : kv.Value;
+                        var par = this.CreateParameter(kv);
                         c.Parameters.Add(par);
                     }
                 }
@@ -251,7 +260,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             }
         }
     }
-    
+
     public class MsSQLDb : Bamboo
     {
 
@@ -310,7 +319,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             if (q.mapping.Count == 1 & q.mapping.First().Key == "*")
             {
                 result = "SELECT";
-                var schema = ((IExtractable)q.LowerJoint).GetSchema();
+                var schema = ((IExtractable)q.LowerJoint).GetSchema().Where(s => !s.IsHidden);
                 int i = schema.Count();
                 foreach (var rs in schema)
                 {
@@ -348,6 +357,15 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return result;
         }
 
+        public override DbParameter CreateParameter(KeyValuePair<string, object> kv)
+        {
+            DbParameter par = base.CreateParameter(kv);
+            if (kv.Value is string)
+            {
+                ((System.Data.SqlClient.SqlParameter)par).Size = -1;
+            }
+            return par;
+        }
     }
 
     public class MySQLDb : Bamboo
