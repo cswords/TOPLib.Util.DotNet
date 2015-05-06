@@ -202,7 +202,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
 
         internal IDictionary<string, string> mapping;
 
-        public DataTable Extract(int timeout=30)
+        public DataTable Extract(int timeout = 30)
         {
             var result = Context.Extract(this.ToSQL(), timeout);
             return result;
@@ -262,9 +262,10 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return result;
         }
 
-        public IFillingQuery Fill(string tableName)
+        public IFillingQuery Fill(string tableName, params string[] fields)
         {
             var result = this.CreateUpper<FillingQuery>();
+            result.fields = fields;
             result.tableName = tableName;
             return result;
         }
@@ -341,7 +342,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                     {
                         result.mapping.Add(kv.Key, Context.LeftBracket + kv.Value + Context.RightBracket);
                     }
-                    else if(string.IsNullOrWhiteSpace(kv.Value))
+                    else if (string.IsNullOrWhiteSpace(kv.Value))
                     {
                         result.mapping.Add(kv.Key, "NULL");
                     }
@@ -378,26 +379,50 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return result;
         }
     }
-    
-    internal class FillingQuery: Leaf, IFillingQuery
+
+    internal class FillingQuery : Leaf, IFillingQuery
     {
         internal string tableName;
+
+        internal string[] fields;
 
         public override string ToSQL()
         {
             var baseSql = LowerJoint.ToSQL();
             var result = string.Empty;
-            var tableQuery=(tableName.StartsWith(Context.LeftBracket)&tableName.EndsWith(Context.RightBracket))?tableName:Context.LeftBracket+tableName+Context.RightBracket;
+            var tableQuery = (tableName.StartsWith(Context.LeftBracket) & tableName.EndsWith(Context.RightBracket)) ? tableName : Context.LeftBracket + tableName + Context.RightBracket;
             if (Context.Db.DetectTable(tableName))
             {
                 //insert into select
                 var sourceSchema = ((IExtractable)LowerJoint).GetSchema().Where(s => !s.IsHidden).ToArray();
-                var targetSchema = ((IExtractable)Context[tableName].All.Select["*"]).GetSchema().ToArray();
 
-                if(sourceSchema.Length!=targetSchema.Length)
+                IDictionary<string, string> fieldDic = null;
+                if (fields != null)
+                {
+                    if (fields.Length > 0)
+                    {
+                        fieldDic = new Dictionary<string, string>();
+                        foreach (var field in fields)
+                        {
+                            fieldDic.Add(field, field);
+                        }
+                    }
+                }
+
+                var targetSchema = fieldDic == null ?
+                    ((IExtractable)Context[tableName].All.Select["*"]).GetSchema().ToArray()
+                    : ((IExtractable)Context[tableName].All.Select[fieldDic]).GetSchema().ToArray();
+
+                if (sourceSchema.Length != targetSchema.Length)
                     throw new Exception("U suck!");
 
                 result += "INSERT INTO " + tableQuery;
+                if (fieldDic != null)
+                {
+                    result += "\n(" + this.Context.LeftBracket
+                        + string.Join(this.Context.RightBracket + ", " + this.Context.LeftBracket, fields)
+                        + this.Context.RightBracket + ")";
+                }
                 result += "\nSELECT";
 
                 for (int i = 0; i < sourceSchema.Length; i++)
@@ -411,7 +436,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 result += "\nFROM (";
                 result += "\n" + baseSql.Indentation();
                 result += "\n) TTTT";
-                
+
             }
             else
             {

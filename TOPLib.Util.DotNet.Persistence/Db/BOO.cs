@@ -58,7 +58,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             foreach (DataRow schemaRow in schemaTable.Rows)
             {
                 var row = new RowSchema(schemaRow);
-                if (!row.FieldName.Equals("__ROWID__"))
+                if (!row.FieldName.Equals("__ROWID__") & !row.IsHidden)
                     result.AddLast(row);
             }
             return result;

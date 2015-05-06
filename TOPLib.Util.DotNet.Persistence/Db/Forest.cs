@@ -41,7 +41,7 @@ namespace TOPLib.Util.DotNet.Persistence.Db
     public interface IExtractable : ISql, IRight
     {
         DataTable Extract(int timeout=30);
-        IFillingQuery Fill(string tableName);
+        IFillingQuery Fill(string tableName, params string[] fields);
     }
 
     public interface IDatabase
