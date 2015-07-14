@@ -373,8 +373,12 @@ namespace TOPLib.Util.DotNet.Persistence.Db
         {
             var result = this.CreateUpper<AliasedSelectQuery>();
             result.mapping = this.mapping;
-            result.mapping.Add(alias, selecting.Value);
+            var value = selecting.Value;
             result.mapping.Remove(selecting);
+            if (result.mapping.ContainsKey(alias))
+                result.mapping[alias] = value;
+            else
+                result.mapping.Add(alias, value);
             result.LowerJoint = this.LowerJoint;
             return result;
         }
@@ -396,33 +400,34 @@ namespace TOPLib.Util.DotNet.Persistence.Db
                 //insert into select
                 var sourceSchema = ((IExtractable)LowerJoint).GetSchema().Where(s => !s.IsHidden).ToArray();
 
-                IDictionary<string, string> fieldDic = null;
+                IRowSchema[] targetSchema = null;
+
                 if (fields != null)
                 {
-                    if (fields.Length > 0)
+                    ISingleSelectable selectable = Context[tableName].All.Select;
+                    foreach (var field in fields)
                     {
-                        fieldDic = new Dictionary<string, string>();
-                        foreach (var field in fields)
-                        {
-                            fieldDic.Add(field, field);
-                        }
+                        selectable = (ISingleSelectable)selectable[field];
                     }
+                    targetSchema =
+                        ((IExtractable)selectable).GetSchema(3600).ToArray();
                 }
-
-                var targetSchema = fieldDic == null ?
-                    ((IExtractable)Context[tableName].All.Select["*"]).GetSchema().ToArray()
-                    : ((IExtractable)Context[tableName].All.Select[fieldDic]).GetSchema().ToArray();
-
+                else
+                {
+                    targetSchema = Context[tableName].Schema.ToArray();
+                }
                 if (sourceSchema.Length != targetSchema.Length)
                     throw new Exception("U suck!");
 
                 result += "INSERT INTO " + tableQuery;
-                if (fieldDic != null)
+
+                if (fields != null)
                 {
                     result += "\n(" + this.Context.LeftBracket
                         + string.Join(this.Context.RightBracket + ", " + this.Context.LeftBracket, fields)
                         + this.Context.RightBracket + ")";
                 }
+
                 result += "\nSELECT";
 
                 for (int i = 0; i < sourceSchema.Length; i++)

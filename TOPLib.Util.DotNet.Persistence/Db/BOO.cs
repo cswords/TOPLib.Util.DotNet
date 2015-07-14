@@ -51,9 +51,9 @@ namespace TOPLib.Util.DotNet.Persistence.Db
             return result;
         }
 
-        public static IEnumerable<IRowSchema> GetSchema(this IExtractable query)
+        public static IEnumerable<IRowSchema> GetSchema(this IExtractable query, int timeout = 30)
         {
-            var schemaTable = ((JointBase)query).Context.GetSchemaTable(query.ToSQL());
+            var schemaTable = ((JointBase)query).Context.GetSchemaTable(query.ToSQL(), timeout);
             var result = new LinkedList<IRowSchema>();
             foreach (DataRow schemaRow in schemaTable.Rows)
             {
