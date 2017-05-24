@@ -1,0 +1,9 @@
+*.suo
+*.dll
+*.pdb
+**/obj/*
+**/obj/**/
+**/bin/*
+**/bin/**/
+packages/**/
+packages/*

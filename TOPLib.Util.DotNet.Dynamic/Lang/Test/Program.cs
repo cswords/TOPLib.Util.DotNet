@@ -68,7 +68,7 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang.Test
             });
 
             ((Dynamic)testD).SetProperty<object>("ObjValue", 1234);
-            var testI = ((Dynamic)testD).AS<ITest>();
+            var testI = ((Dynamic)testD).As<ITest>();
 
             var a = testI.ObjValue;
             var b = testI.Print("dodo");

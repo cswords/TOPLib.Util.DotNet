@@ -47,7 +47,7 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
 
         private static IDictionary<Type, Type> cache = new Dictionary<Type, Type>();
 
-        public static K AS<K>(this Dynamic d)
+        public static K As<K>(this Dynamic d)
         {
             if (typeof(K).IsInterface)
             {
@@ -138,7 +138,7 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
 
                                                 pb.SetSetMethod(mb);
                                             }
-                                            continue;                                          
+                                            continue;
                                         }
                                     }
                                 }
@@ -157,10 +157,10 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
             }
             throw new Exception("WTH r u doing?");
         }
-        
+
         public static Delegate GetFunc(this CastedBase casted, MethodBase methodBase)
         {
-            var memberStore=casted.DynamicObj.MemberStore[methodBase.Name];
+            var memberStore = casted.DynamicObj.MemberStore[methodBase.Name];
             if (memberStore != null)
             {
                 return memberStore.FindMethod(methodBase.GetParameters().Select(p => p.ParameterType).ToArray());

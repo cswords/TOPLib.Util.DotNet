@@ -218,7 +218,7 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
             Func<T> getter
             )
         {
-            object toSet=null;
+            object toSet = null;
             if (MemberStore[name] != null)
             {
                 var field = MemberStore[name].FindField();
@@ -234,7 +234,7 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
                         toSet = field;
                 }
             }
-            var property=PropertyStore.Create<T>(setter, getter);
+            var property = PropertyStore.Create<T>(setter, getter);
             MemberStore.Attach(name, property);
             if (toSet != null)
                 property.Set(toSet);
