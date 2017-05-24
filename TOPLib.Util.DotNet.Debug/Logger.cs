@@ -10,6 +10,7 @@ namespace TOPLib.Util.DotNet.Debug
     public class Logger
     {
         private LogFile _LoggerFile;
+
         internal LogFile LoggerFile
         {
             get
@@ -23,6 +24,17 @@ namespace TOPLib.Util.DotNet.Debug
             this._LoggerFile = new LogFile(LogFolder, (logName ?? AppName) + ".log");
         }
 
+        private static string AppName
+        {
+            get
+            {
+                var mainModule = Path.GetFileName(Process.GetCurrentProcess().MainModule.FileName);
+                var lastDot = mainModule.LastIndexOf('.');
+                return mainModule.Substring(0, lastDot);
+            }
+        }
+
+        #region Global loggers: Default(Today), Today, Single
         private static string _logFolder;
 
         public static string LogFolder
@@ -87,17 +99,6 @@ namespace TOPLib.Util.DotNet.Debug
                 return _Single;
             }
         }
-
-
-        //-----------------------
-        private static string AppName
-        {
-            get
-            {
-                var mainModule = Path.GetFileName(Process.GetCurrentProcess().MainModule.FileName);
-                var lastDot = mainModule.LastIndexOf('.');
-                return mainModule.Substring(0, lastDot);
-            }
-        }
+        #endregion
     }
 }

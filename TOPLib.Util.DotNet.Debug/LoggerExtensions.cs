@@ -14,14 +14,15 @@ namespace TOPLib.Util.DotNet.Debug
 
         public static void Write(this Logger logger, string text, Exception e)
         {
+            const string newLine = "\r\n ";
             var msg = text;
-            var ie = e;
+            var ie = e; // iterate the inner exceptions
             while (ie != null)
             {
-                msg += "\r\n " + (ie == e ? "E" : "Inner e") + "xception: " + ie.GetType().FullName;
-                msg += "\r\n " + ie.Message;
+                msg += newLine + (ie == e ? "E" : "Inner e") + "xception: " + ie.GetType().FullName;
+                msg += newLine + ie.Message;
                 if (ie.StackTrace != null)
-                    msg += "\r\n " + ie.StackTrace;
+                    msg += newLine + ie.StackTrace;
                 ie = ie.InnerException;
             }
             logger.LoggerFile.WriteLine(msg);
