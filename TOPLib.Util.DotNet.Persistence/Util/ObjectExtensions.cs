@@ -5,6 +5,7 @@ using System.Text;
 
 namespace TOPLib.Util.DotNet.Persistence.Util
 {
+    // This is a buggy extension function, which is not suggested to be used outside of this project
     public static class ObjectExtensions
     {
         public static Boolean IsConvertableTo(this Type sourceType, Type targetType)
