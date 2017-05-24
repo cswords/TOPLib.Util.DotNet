@@ -125,6 +125,12 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
         }
     }
 
+    /// <summary>
+    /// This class is supposed to use like ExpandoObject.
+    /// A Dynamic object can have dynamic method and property implementation.
+    /// It can also be casted to a interface if the required members of the interface were implemented.
+    /// </summary>
+    /// <seealso cref="TOPLib.Util.DotNet.Dynamic.Lang.DynamicBase" />
     public class Dynamic : DynamicBase
     {
         private static readonly object simpleObj = new object();
@@ -212,6 +218,13 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
             return (PropertyStore)constructor.Invoke(new object[] { fieldInfo, ObjectReference });
         }
 
+        /// <summary>
+        /// Set up a property.
+        /// </summary>
+        /// <typeparam name="T">The property type</typeparam>
+        /// <param name="name">The property name.</param>
+        /// <param name="setter">The setter of property, which can be null for readonly property</param>
+        /// <param name="getter">The getter of property, which can be null for writeonly property</param>
         public void SetProperty<T>(
             string name,
             Action<T> setter,
@@ -241,6 +254,12 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
         }
 
 
+        /// <summary>
+        /// Set up a property.
+        /// </summary>
+        /// <typeparam name="T">The property type</typeparam>
+        /// <param name="name">The property name</param>
+        /// <param name="constantValue">The constant property value.</param>
         public void SetProperty<T>(
             string name,
             T constantValue

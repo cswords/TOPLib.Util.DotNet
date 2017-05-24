@@ -47,6 +47,19 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
 
         private static IDictionary<Type, Type> cache = new Dictionary<Type, Type>();
 
+        /// <summary>
+        /// Ases the specified d.
+        /// </summary>
+        /// <typeparam name="K">The target interface type.</typeparam>
+        /// <param name="d">The Dynamic object which will be cast to the target interface type.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception">
+        /// Property type is not implemented!!!
+        /// or
+        /// Property is not implemented!!!
+        /// or
+        /// The target type must be an Interface!!!
+        /// </exception>
         public static K As<K>(this Dynamic d)
         {
             if (typeof(K).IsInterface)
@@ -159,7 +172,7 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
 
                 return result;
             }
-            throw new Exception("WTH r u doing?");
+            throw new Exception("The target type must be an Interface!!!");
         }
 
         public static Delegate GetFunc(this CastedBase casted, MethodBase methodBase)
