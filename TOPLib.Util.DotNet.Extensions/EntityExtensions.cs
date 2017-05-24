@@ -20,7 +20,7 @@ namespace TOPLib.Util.DotNet.Extensions
             return keys;
         }
 
-        public static IDictionary<string,object> GetLinqPrimaryKeyValues(this object condition)
+        public static IDictionary<string, object> GetLinqPrimaryKeyValues(this object condition)
         {
             if (Attribute.GetCustomAttribute(condition.GetType(), typeof(TableAttribute)) != null)
             {

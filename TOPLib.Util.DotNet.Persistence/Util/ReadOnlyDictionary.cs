@@ -5,7 +5,6 @@ using System.Text;
 
 namespace TOPLib.Util.DotNet.Persistence.Util
 {
-
     public class ReadOnlyDictionary<K, V> : IEnumerable<KeyValuePair<K, V>>
     {
         private IDictionary<K, V> data = null;

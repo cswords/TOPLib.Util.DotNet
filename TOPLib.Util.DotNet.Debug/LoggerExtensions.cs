@@ -18,7 +18,7 @@ namespace TOPLib.Util.DotNet.Debug
             var ie = e;
             while (ie != null)
             {
-                msg += "\r\n "+(ie==e?"E":"Inner e")+"xception: " + ie.GetType().FullName;
+                msg += "\r\n " + (ie == e ? "E" : "Inner e") + "xception: " + ie.GetType().FullName;
                 msg += "\r\n " + ie.Message;
                 if (ie.StackTrace != null)
                     msg += "\r\n " + ie.StackTrace;

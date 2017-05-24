@@ -77,7 +77,7 @@ namespace TOPLib.Util.DotNet.Extensions
             }
             return result;
         }
-        
+
         public static string AddParamToUrl(this string url, string param, string value)
         {
             string result = url;
@@ -91,7 +91,7 @@ namespace TOPLib.Util.DotNet.Extensions
 
         public static Expression<Func<T, TResult>> ToExpre<T, TResult>(this string exp, string paramName = "o")
         {
-            var p = System.Linq.Expressions.Expression.Parameter(typeof(T), paramName);
+            var p = Expression.Parameter(typeof(T), paramName);
             var e = System.Linq.Dynamic.DynamicExpression.ParseLambda(new[] { p }, typeof(TResult), exp);
             return (Expression<Func<T, TResult>>)e;
         }
