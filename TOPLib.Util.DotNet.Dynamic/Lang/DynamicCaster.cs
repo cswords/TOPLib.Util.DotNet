@@ -140,11 +140,15 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
                                             }
                                             continue;
                                         }
+                                        else
+                                        {
+                                            throw new Exception("Property type is not implemented!!!");
+                                        }
                                     }
                                 }
                             }
                         }
-                        throw new Exception("Property not implemented!!!");
+                        throw new Exception("Property is not implemented!!!");
                     }
 
                     type = tb.CreateType();

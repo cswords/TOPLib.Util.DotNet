@@ -6,7 +6,7 @@ using System.Text;
 
 namespace TOPLib.Util.DotNet.Dynamic.Lang
 {
-    public class MemberStore : IEnumerable<object>
+    internal class MemberStore : IEnumerable<object>
     {
         private IList<object> collection;
 
@@ -81,6 +81,15 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
             return null;
         }
 
+        public void ClearProperty()
+        {
+            var toRemove = this.Where(obj => obj is PropertyStore).ToList();
+            foreach (var obj in toRemove)
+            {
+                collection.Remove(obj);
+            }
+        }
+
         public IEnumerator<object> GetEnumerator()
         {
             return collection.GetEnumerator();
@@ -92,7 +101,7 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
         }
     }
 
-    public class MemberDictionary : IEnumerable<KeyValuePair<string, MemberStore>>
+    internal class MemberDictionary : IEnumerable<KeyValuePair<string, MemberStore>>
     {
         private IDictionary<string, MemberStore> dict;
         public MemberDictionary()

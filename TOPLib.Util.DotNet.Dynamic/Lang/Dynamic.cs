@@ -11,7 +11,7 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
 {
     public abstract class DynamicBase : DynamicObject
     {
-        internal protected MemberDictionary MemberStore { get; private set; }
+        internal MemberDictionary MemberStore { get; private set; }
 
         protected DynamicBase()
         {
@@ -131,7 +131,7 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
 
         internal object ObjectReference { get; private set; }
 
-        public Dynamic(object objRef)
+        public Dynamic(object objRef = null)
             : base()
         {
             if (objRef == null) objRef = simpleObj;
@@ -249,12 +249,7 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
             object toSet = null;
             if (MemberStore[name] != null)
             {
-                var field = MemberStore[name].FindField();
-                if (field != null)
-                {
-                    if (field is PropertyStore)
-                        return;
-                }
+                MemberStore[name].ClearProperty();
             }
             var property = PropertyStore.Create<T>(null, () =>
             {
