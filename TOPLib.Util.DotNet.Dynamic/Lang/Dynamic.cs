@@ -137,6 +137,14 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
 
         internal object ObjectReference { get; private set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Dynamic"/> class.
+        /// </summary>
+        /// <param name="objRef">
+        /// A reference object which the Dynamic object can inherit the members from. 
+        /// It will be a simple object if null is set to this parameter.
+        /// </param>
+        /// <exception cref="Exception">A method in this class cannot be converted to Func or Action!!!</exception>
         public Dynamic(object objRef = null)
             : base()
         {
@@ -177,7 +185,7 @@ namespace TOPLib.Util.DotNet.Dynamic.Lang
                     delegateType = Assembly.GetAssembly(delegateType).GetType(typeName);
 
                     if (delegateType == null)
-                        throw new Exception("Wth of the method do you have???");
+                        throw new Exception("A method in this class cannot be converted to Func or Action!!!");
 
                     if (delegateType.IsGenericType)
                     {
